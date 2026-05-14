@@ -141,50 +141,131 @@ ConfigProfile (OMO 配置集 — 新增概念)
   └── published_to: "opencode.json" | null
 ```
 
-### 2.3 当前 Provider 清单（来自 `opencode providers list`）
+### 2.3 Provider 动态读取方法
 
-| Provider 名称 | 认证方式 | 状态 |
-|---|---|---|
-| OpenRouter | api (auth.json) | ✅ 已配置 |
-| Alibaba Coding Plan (China) | api (auth.json) | ✅ 已配置 |
-| Zhipu AI Coding Plan | api (auth.json) | ✅ 已配置 |
-| Z.AI Coding Plan | api (auth.json) | ✅ 已配置 |
-| DeepSeek | api (auth.json) | ✅ 已配置 |
-| OpenAI | api (auth.json) | ✅ 已配置 |
-| Xiaomi Token Plan (China) | api (auth.json) | ✅ 已配置 |
-| Alibaba (Env) | DASHSCOPE_API_KEY | ✅ 环境变量 |
-| Alibaba China (Env) | DASHSCOPE_API_KEY | ✅ 环境变量 |
-| OpenAI (Env) | OPENAI_API_KEY | ✅ 环境变量 |
-| Anthropic (Env) | ANTHROPIC_API_KEY | ✅ 环境变量 |
+Provider 和 Model 数据**不静态记录**，而是通过以下方式动态获取：
 
-### 2.4 当前 Agent → Provider/Model 映射
+#### 方法一: `opencode providers list` CLI 命令
 
-| Agent | 模型 | Provider | 思考模式 | 备用模型 |
-|---|---|---|---|---|
-| sisyphus | qwen3.6-plus | alibaba-coding-plan-cn | enabled (32k) | kimi-k2.5 |
-| hephaestus | qwen3.6-plus | alibaba-coding-plan-cn | enabled (32k) | kimi-k2.5 |
-| oracle | glm-5-turbo | zhipuai-coding-plan | - | - |
-| librarian | MiniMax-M2.5 | alibaba-coding-plan-cn | - | - |
-| explore | MiniMax-M2.5 | alibaba-coding-plan-cn | - | - |
-| multimodal-looker | kimi-k2.5 | alibaba-coding-plan-cn | enabled (16k) | - |
-| prometheus | glm-5-turbo | zhipuai-coding-plan | - | - |
-| metis | glm-5-turbo | zhipuai-coding-plan | - | - |
-| momus | MiniMax-M2.5 | alibaba-coding-plan-cn | - | - |
-| atlas | glm-5 | alibaba-coding-plan-cn | - | kimi-k2.5 |
-| sisyphus-junior | glm-5 | alibaba-coding-plan-cn | - | kimi-k2.5 |
+```bash
+# 获取所有已配置的 Provider 及其认证方式
+opencode providers list
 
-### 2.5 当前 Category → Model 映射
+# 输出包含两部分:
+# 1. Credentials — 通过 auth.json 配置的 Provider (标注 "api")
+# 2. Environment — 通过环境变量认证的 Provider (标注 env var 名称)
+```
 
-| Category | 模型 | Provider | 思考模式 | Variant |
-|---|---|---|---|---|
-| visual-engineering | qwen3.6-plus | alibaba-coding-plan-cn | enabled (32k) | - |
-| ultrabrain | qwen3.6-plus | alibaba-coding-plan-cn | enabled (64k) | high |
-| deep | qwen3.6-plus | alibaba-coding-plan-cn | enabled (32k) | high |
-| artistry | MiniMax-M2.5 | alibaba-coding-plan-cn | - | - |
-| quick | glm-5-turbo | zhipuai-coding-plan | - | - |
-| unspecified-low | MiniMax-M2.5 | alibaba-coding-plan-cn | - | - |
-| unspecified-high | glm-5-turbo | zhipuai-coding-plan | - | - |
-| writing | qwen3.6-plus | alibaba-coding-plan-cn | - | - |
+**后端实现**: 通过 `child_process.exec('opencode providers list')` 执行命令，解析文本输出。
+
+**CLI 输出格式**:
+```
+┌ Credentials ~/.local/share/opencode/auth.json
+● OpenRouter api
+● Alibaba Coding Plan (China) api
+● Zhipu AI Coding Plan api
+...
+└ N credentials
+
+┌ Environment
+● Alibaba DASHSCOPE_API_KEY
+● OpenAI OPENAI_API_KEY
+...
+└ N environment variables
+```
+
+**解析策略**: 使用 ANSI 转义序列过滤 + 正则提取，或优先使用 `--output=json` 参数（如果支持）。
+
+#### 方法二: 解析 `opencode.json` 的 `provider` 字段
+
+```typescript
+// 读取 ~/.config/opencode/opencode.json
+// 解析 provider 字段获取每个 Provider 的完整定义:
+
+interface ProviderDefinition {
+  npm: string;                    // npm 包名, 如 "@ai-sdk/openai-compatible"
+  name: string;                   // Provider 显示名称
+  options: {                      // 连接选项
+    baseURL?: string;
+    apiKey?: string;
+    [key: string]: unknown;
+  };
+  models: Record<string, ModelDefinition>;
+}
+
+interface ModelDefinition {
+  name: string;
+  contextWindow?: number;
+  options?: {                     // 模型参数
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+    reasoningEffort?: string;
+    thinking?: {
+      type: 'enabled' | 'disabled';
+      budgetTokens: number;
+    };
+  };
+  variants?: Record<string, {     // 模型变体
+    options: Record<string, unknown>;
+  }>;
+}
+```
+
+#### 方法三: OMO JSON Schema 校验
+
+从 `https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json` 获取最新 schema，用于:
+- 前端表单自动生成
+- 配置校验
+- Agent/Category 字段合法性检查
+
+### 2.4 Agent 动态读取方法
+
+Agent 定义存储在 `oh-my-openagent.jsonc` 的 `agents` 字段中。
+
+**读取方式**: 解析 JSONC 文件 (需处理注释)，提取 `agents` 对象。
+
+```typescript
+interface AgentConfig {
+  model: string;                          // "provider/modelName" 格式
+  fallback_models?: string[] | ModelRef[]; // 备用模型
+  thinking?: { type: 'enabled' | 'disabled'; budgetTokens: number };
+  compaction?: { model: string };
+  ultrawork?: { model: string };
+  variant?: string;                       // max/high/medium/low/xhigh
+  allow_non_gpt_model?: boolean;
+  description?: string;
+}
+```
+
+**内置 Agent 列表** (由 OMO 插件预定义，不可删除):
+`build`, `sisyphus`, `oracle`, `librarian`, `explore`, `multimodal-looker`,
+`prometheus`, `metis`, `momus`, `atlas`, `sisyphus-junior`, `hephaestus`
+
+用户可在 `agents` 字段中覆盖任意内置 Agent 的模型配置。
+
+### 2.5 Category 动态读取方法
+
+Category 定义存储在 `oh-my-openagent.jsonc` 的 `categories` 字段中。
+
+**读取方式**: 同 Agent，解析 JSONC 文件的 `categories` 对象。
+
+```typescript
+interface CategoryConfig {
+  model: string;                           // "provider/modelName" 格式
+  thinking?: { type: 'enabled' | 'disabled'; budgetTokens: number };
+  variant?: string;
+  description?: string;
+}
+```
+
+**内置 Category 列表** (由 OMO 插件预定义):
+`visual-engineering`, `ultrabrain`, `deep`, `artistry`,
+`quick`, `unspecified-low`, `unspecified-high`, `writing`
+
+用户可在 `categories` 字段中覆盖任意 Category 的模型配置。
 
 ---
 
