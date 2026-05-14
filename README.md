@@ -1,41 +1,36 @@
-# OMO Config Web
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Web-based visual configuration tool for [Oh-My-OpenAgent (OMO)](https://github.com/code-yeongyu/oh-my-openagent).
+## Getting Started
 
-## Overview
-
-OMO Config Web provides a visual, intuitive way to configure OMO's agent orchestration settings through a web interface, replacing manual JSON editing.
-
-### Features (Planned)
-
-- **Provider Layer**: Dynamically load and display providers from `opencode providers` command
-- **Model Layer**: Browse and configure models under each provider
-- **Agent/Role Layer**: Assign agents to specific providers with model routing rules
-- **OMO Configuration**: Drag-and-drop agents from providers into active OMO config profiles
-- **Enable/Disable**: Toggle OMO config profiles on/off and publish to opencode.json
-
-### Tech Stack (Proposed)
-
-- **Frontend**: Next.js + TypeScript
-- **UI**: shadcn/ui + Radix UI
-- **State**: Zustand
-- **Drag & Drop**: dnd-kit
-- **Node Editor**: React Flow (@xyflow/react)
-- **JSON Editing**: Monaco Editor
-
-## Development
+First, run the development server:
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Start dev server
+npm run dev
+# or
+yarn dev
+# or
 pnpm dev
-
-# Build
-pnpm build
+# or
+bun dev
 ```
 
-## License
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-MIT
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
