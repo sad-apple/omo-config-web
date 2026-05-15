@@ -1,4 +1,44 @@
-// Provider types
+// === Thinking ===
+
+export type ThinkingType = "enabled" | "disabled";
+
+export interface ThinkingConfig {
+  type: ThinkingType;
+  budgetTokens?: number;
+}
+
+// === Variant ===
+
+export type Variant = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+
+// === Permission ===
+
+export type PermissionLevel = "ask" | "allow" | "deny";
+
+export interface PermissionConfig {
+  edit?: PermissionLevel;
+  bash?: PermissionLevel | Record<string, PermissionLevel>;
+  webfetch?: PermissionLevel;
+  task?: PermissionLevel;
+  doom_loop?: PermissionLevel;
+  external_directory?: PermissionLevel;
+}
+
+// === Model Reference (for fallback_models) ===
+
+export interface FallbackModelEntry {
+  model: string;
+  variant?: string;
+  reasoningEffort?: Variant;
+  temperature?: number;
+  top_p?: number;
+  maxTokens?: number;
+  thinking?: ThinkingConfig;
+}
+
+export type ModelRef = string | FallbackModelEntry;
+
+// === Provider types ===
 
 export interface Provider {
   name: string;
@@ -17,36 +57,54 @@ export interface Model {
     temperature?: number;
     maxTokens?: number;
     topP?: number;
-    thinking?: { type: 'enabled' | 'disabled'; budgetTokens: number };
+    thinking?: ThinkingConfig;
+    reasoningEffort?: Variant;
+    textVerbosity?: "low" | "medium" | "high";
+    frequencyPenalty?: number;
+    presencePenalty?: number;
   };
   variants?: Record<string, { options: Record<string, unknown> }>;
 }
 
-// Agent types
+// === Agent types ===
 
 export interface Agent {
   name: string;
   model: string;
-  fallback_models?: string[];
-  thinking?: { type: 'enabled' | 'disabled'; budgetTokens: number };
-  compaction?: { model: string };
-  ultrawork?: { model: string };
+  fallback_models?: ModelRef[];
   variant?: string;
-  allow_non_gpt_model?: boolean;
+  category?: string;
+  skills?: string[];
+  temperature?: number;
+  top_p?: number;
+  prompt?: string;
+  prompt_append?: string;
+  tools?: Record<string, boolean>;
+  disable?: boolean;
   description?: string;
+  mode?: "subagent" | "primary" | "all";
+  color?: string;
+  permission?: PermissionConfig;
+  maxTokens?: number;
+  thinking?: ThinkingConfig;
+  reasoningEffort?: Variant;
+  textVerbosity?: "low" | "medium" | "high";
+  providerOptions?: Record<string, unknown>;
+  ultrawork?: { model: string; variant?: string };
+  compaction?: { model: string; variant?: string };
 }
 
-// Category types
+// === Category types ===
 
 export interface Category {
   name: string;
   model: string;
-  thinking?: { type: 'enabled' | 'disabled'; budgetTokens: number };
+  thinking?: ThinkingConfig;
   variant?: string;
   description?: string;
 }
 
-// Config types
+// === Config Profile ===
 
 export interface ConfigProfile {
   name: string;
@@ -54,6 +112,8 @@ export interface ConfigProfile {
   agents: string[];
   categories: string[];
 }
+
+// === Runtime Config ===
 
 export interface BackgroundTaskConfig {
   defaultConcurrency: number;
