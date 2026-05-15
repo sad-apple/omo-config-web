@@ -2,18 +2,34 @@
 
 import { useState } from "react";
 
-import type { Model } from "@/lib/mock-data";
-import { mockProviders } from "@/lib/mock-data";
+import { useConfigStore } from "@/store/configStore";
+import type { Model } from "@/types";
 import { ModelDetail } from "@/components/models/ModelDetail";
 import { ModelList } from "@/components/models/ModelList";
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
 
 export default function ModelsPage() {
-  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const providers = useConfigStore((state) => state.providers);
+  const updateModel = useConfigStore((state) => state.updateModel);
+  
+  const [selectedModel, setSelectedModel] = useState<{
+    model: Model;
+    providerKey: string;
+    modelKey: string;
+  } | null>(null);
+
+  const handleSelectModel = (model: Model, providerKey: string, modelKey: string) => {
+    setSelectedModel({ model, providerKey, modelKey });
+  };
+
+  const handleUpdateModel = (updates: Partial<Model>) => {
+    if (!selectedModel) return;
+    updateModel(selectedModel.providerKey, selectedModel.modelKey, updates);
+  };
 
   return (
     <DualModeEditor
-      jsonValue={{ providers: mockProviders }}
+      jsonValue={{ providers }}
       title="Model Layer"
     >
       <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
@@ -30,11 +46,15 @@ export default function ModelsPage() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
             <ModelList
-              providers={mockProviders}
-              selectedModel={selectedModel}
-              onSelectModel={setSelectedModel}
+              providers={providers}
+              selectedModel={selectedModel?.model ?? null}
+              onSelectModel={handleSelectModel}
             />
-            <ModelDetail model={selectedModel} />
+            <ModelDetail 
+              model={selectedModel?.model ?? null} 
+              isEditing={false}
+              onUpdateModel={handleUpdateModel}
+            />
           </div>
         </div>
       </div>

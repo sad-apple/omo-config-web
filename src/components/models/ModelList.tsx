@@ -1,17 +1,19 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import type { Model, Provider } from "@/lib/mock-data";
+import type { Model, Provider } from "@/types";
 import { ModelCard } from "./ModelCard";
 
 interface ModelListProps {
-  providers: Provider[];
+  providers: Record<string, Provider>;
   selectedModel: Model | null;
-  onSelectModel: (model: Model) => void;
+  onSelectModel: (model: Model, providerKey: string, modelKey: string) => void;
 }
 
 export function ModelList({ providers, selectedModel, onSelectModel }: ModelListProps) {
-  if (providers.length === 0) {
+  const providerEntries = Object.entries(providers);
+
+  if (providerEntries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-lg font-medium text-muted-foreground">No models found</p>
@@ -24,25 +26,27 @@ export function ModelList({ providers, selectedModel, onSelectModel }: ModelList
 
   return (
     <div className="flex flex-col gap-6">
-      {providers.map((provider, index) => (
-        <section key={provider.id}>
+      {providerEntries.map(([providerKey, provider], index) => (
+        <section key={providerKey}>
           <div className="mb-4 flex items-center gap-3">
             <h2 className="text-lg font-semibold">{provider.name}</h2>
             <span className="text-xs text-muted-foreground">
-              {provider.models.length} model{provider.models.length !== 1 ? "s" : ""}
+              {Object.keys(provider.models).length} model{Object.keys(provider.models).length !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="flex flex-col gap-3">
-            {provider.models.map((model) => (
+            {Object.entries(provider.models).map(([modelKey, model]) => (
               <ModelCard
-                key={model.id}
+                key={modelKey}
                 model={model}
-                isSelected={selectedModel?.id === model.id}
-                onClick={() => onSelectModel(model)}
+                modelName={modelKey}
+                providerName={provider.name}
+                isSelected={selectedModel?.name === model.name}
+                onClick={() => onSelectModel(model, providerKey, modelKey)}
               />
             ))}
           </div>
-          {index < providers.length - 1 && <Separator className="my-6" />}
+          {index < providerEntries.length - 1 && <Separator className="my-6" />}
         </section>
       ))}
     </div>
