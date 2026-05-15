@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
-import { Eye, Code } from "lucide-react";
+import { Eye, Code, Save, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useConfigStore, useIsDirty } from "@/store/configStore";
+import { useDraftRestore } from "@/hooks/useDraftRestore";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface DualModeEditorProps {
   children: React.ReactNode;
@@ -19,11 +23,37 @@ export function DualModeEditor({
   onJsonChange,
   title,
 }: DualModeEditorProps) {
+  const isDirty = useIsDirty();
+  const setLastSavedSnapshot = useConfigStore((state) => state.setLastSavedSnapshot);
+  const exportToJson = useConfigStore((state) => state.exportToJson);
+  const { showRestoreDialog, draftData, restoreDraft, discardDraft, saveDraft } = useDraftRestore();
+
   const [mode, setMode] = useState<"visual" | "json">("visual");
   const [jsonString, setJsonString] = useState(() =>
     JSON.stringify(jsonValue, null, 2)
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Handle beforeunload warning
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty || hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty, hasUnsavedChanges]);
+
+  // Auto-save draft to localStorage when dirty
+  useEffect(() => {
+    if (isDirty) {
+      const json = exportToJson();
+      saveDraft(json);
+    }
+  }, [isDirty, exportToJson, saveDraft]);
 
   // Sync when jsonValue prop changes externally
   const prevJsonValueRef = useState(jsonValue)[0];
@@ -51,6 +81,11 @@ export function DualModeEditor({
     [onJsonChange]
   );
 
+  const handleSave = useCallback(() => {
+    setLastSavedSnapshot();
+    toast.success("Configuration saved");
+  }, [setLastSavedSnapshot]);
+
   return (
     <Tabs
       value={mode}
@@ -76,12 +111,25 @@ export function DualModeEditor({
                 JSON
               </TabsTrigger>
             </TabsList>
-            {hasUnsavedChanges && mode === "json" && (
-              <span className="text-xs text-amber-600 dark:text-amber-400">
+            {(hasUnsavedChanges || isDirty) && (
+              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-3 w-3" />
                 Unsaved changes
               </span>
             )}
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {(hasUnsavedChanges || isDirty) && (
+            <Button
+              size="sm"
+              onClick={handleSave}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              Save
+            </Button>
+          )}
         </div>
       </div>
 
@@ -106,6 +154,26 @@ export function DualModeEditor({
           />
         </TabsContent>
       </div>
+
+      {/* Draft Restore Dialog */}
+      <Dialog open={showRestoreDialog} onOpenChange={(open) => !open && discardDraft()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore unsaved changes?</DialogTitle>
+            <DialogDescription>
+              A draft from {draftData ? new Date(draftData.timestamp).toLocaleString() : ""} was found. Would you like to restore it?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={discardDraft}>
+              Discard
+            </Button>
+            <Button onClick={restoreDraft}>
+              Restore
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 }
