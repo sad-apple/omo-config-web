@@ -1,128 +1,139 @@
-export interface ThinkingConfig {
-  enabled: boolean;
-  budget?: number; // thinking token budget
-}
+import type { Provider, Agent } from "@/types";
 
-export interface Model {
-  id: string;
-  name: string;
-  provider: string;
-  contextWindow: number; // max context length in tokens
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  thinking: ThinkingConfig;
-  description?: string;
-}
-
-export interface Provider {
-  id: string;
-  name: string;
-  baseUrl: string;
-  apiKey?: string;
-  models: Model[];
-}
-
-export const mockProviders: Provider[] = [
-  {
-    id: "openai",
+export const mockProviders: Record<string, Provider> = {
+  openai: {
     name: "OpenAI",
-    baseUrl: "https://api.openai.com/v1",
-    apiKey: "sk-xxx",
-    models: [
-      {
-        id: "gpt-4o",
+    npm: "@openai/sdk",
+    options: {
+      baseURL: "https://api.openai.com/v1",
+      apiKey: "sk-xxx",
+    },
+    models: {
+      "gpt-4o": {
         name: "gpt-4o",
-        provider: "OpenAI",
         contextWindow: 128_000,
-        temperature: 0.7,
-        maxTokens: 16_384,
-        topP: 1.0,
-        thinking: { enabled: false },
-        description: "OpenAI's flagship multimodal model with fast, high-quality responses.",
+        options: {
+          temperature: 0.7,
+          maxTokens: 16_384,
+          topP: 1.0,
+          thinking: { type: "disabled", budgetTokens: 0 },
+        },
       },
-      {
-        id: "gpt-4o-mini",
+      "gpt-4o-mini": {
         name: "gpt-4o-mini",
-        provider: "OpenAI",
         contextWindow: 128_000,
-        temperature: 0.7,
-        maxTokens: 16_384,
-        topP: 1.0,
-        thinking: { enabled: false },
-        description: "A smaller, faster, and more cost-effective version of gpt-4o.",
+        options: {
+          temperature: 0.7,
+          maxTokens: 16_384,
+          topP: 1.0,
+          thinking: { type: "disabled", budgetTokens: 0 },
+        },
       },
-      {
-        id: "o3",
+      o3: {
         name: "o3",
-        provider: "OpenAI",
         contextWindow: 200_000,
-        temperature: 1.0,
-        maxTokens: 100_000,
-        topP: 1.0,
-        thinking: { enabled: true, budget: 80_000 },
-        description: "OpenAI's reasoning model with advanced thinking capabilities.",
+        options: {
+          temperature: 1.0,
+          maxTokens: 100_000,
+          topP: 1.0,
+          thinking: { type: "enabled", budgetTokens: 80_000 },
+        },
       },
-    ],
+    },
   },
-  {
-    id: "anthropic",
+  anthropic: {
     name: "Anthropic",
-    baseUrl: "https://api.anthropic.com",
-    apiKey: "sk-ant-xxx",
-    models: [
-      {
-        id: "claude-sonnet-4-20250514",
+    npm: "@anthropic-ai/sdk",
+    options: {
+      baseURL: "https://api.anthropic.com",
+      apiKey: "sk-ant-xxx",
+    },
+    models: {
+      "claude-sonnet-4-20250514": {
         name: "claude-sonnet-4-20250514",
-        provider: "Anthropic",
         contextWindow: 200_000,
-        temperature: 0.7,
-        maxTokens: 8_192,
-        topP: 0.7,
-        thinking: { enabled: true, budget: 32_000 },
-        description: "Anthropic's mid-tier model balancing intelligence and speed.",
+        options: {
+          temperature: 0.7,
+          maxTokens: 8_192,
+          topP: 0.7,
+          thinking: { type: "enabled", budgetTokens: 32_000 },
+        },
       },
-      {
-        id: "claude-opus-4-20250514",
+      "claude-opus-4-20250514": {
         name: "claude-opus-4-20250514",
-        provider: "Anthropic",
         contextWindow: 200_000,
-        temperature: 0.7,
-        maxTokens: 8_192,
-        topP: 0.7,
-        thinking: { enabled: true, budget: 64_000 },
-        description: "Anthropic's most intelligent model for complex tasks.",
+        options: {
+          temperature: 0.7,
+          maxTokens: 8_192,
+          topP: 0.7,
+          thinking: { type: "enabled", budgetTokens: 64_000 },
+        },
       },
-    ],
+    },
   },
-  {
-    id: "deepseek",
+  deepseek: {
     name: "DeepSeek",
-    baseUrl: "https://api.deepseek.com",
-    apiKey: "sk-xxx",
-    models: [
-      {
-        id: "deepseek-chat",
+    npm: "deepseek",
+    options: {
+      baseURL: "https://api.deepseek.com",
+      apiKey: "sk-xxx",
+    },
+    models: {
+      "deepseek-chat": {
         name: "deepseek-chat",
-        provider: "DeepSeek",
         contextWindow: 64_000,
-        temperature: 0.7,
-        maxTokens: 8_192,
-        topP: 0.95,
-        thinking: { enabled: false },
-        description: "DeepSeek's general-purpose chat model.",
+        options: {
+          temperature: 0.7,
+          maxTokens: 8_192,
+          topP: 0.95,
+          thinking: { type: "disabled", budgetTokens: 0 },
+        },
       },
-      {
-        id: "deepseek-reasoner",
+      "deepseek-reasoner": {
         name: "deepseek-reasoner",
-        provider: "DeepSeek",
         contextWindow: 64_000,
-        temperature: 1.0,
-        maxTokens: 8_192,
-        topP: 0.95,
-        thinking: { enabled: true, budget: 32_000 },
-        description: "DeepSeek's reasoning model with chain-of-thought capabilities.",
+        options: {
+          temperature: 1.0,
+          maxTokens: 8_192,
+          topP: 0.95,
+          thinking: { type: "enabled", budgetTokens: 32_000 },
+        },
       },
-    ],
+    },
   },
-];
+};
+
+export const mockAgents: Record<string, Agent> = {
+  sisyphus: {
+    name: "sisyphus",
+    model: "alibaba-coding-plan-cn/qwen3.6-plus",
+    fallback_models: ["zhipuai-coding-plan/glm-5-turbo"],
+    thinking: { type: "enabled", budgetTokens: 32_768 },
+    variant: "high",
+    ultrawork: {
+      model: "alibaba-coding-plan-cn/qwen3.6-plus",
+      variant: "max",
+    },
+    compaction: {
+      model: "zhipuai-coding-plan/glm-5-turbo",
+    },
+    description: "The primary workhorse agent that drives long-running implementation tasks.",
+  },
+  oracle: {
+    name: "oracle",
+    model: "zhipuai-coding-plan/glm-5-turbo",
+    thinking: { type: "enabled", budgetTokens: 16_384 },
+    description: "Analysis and review agent focused on code quality and architecture.",
+  },
+  librarian: {
+    name: "librarian",
+    model: "alibaba-coding-plan-cn/MiniMax-M2.5",
+    description: "Research agent specialized in information retrieval and documentation.",
+  },
+  explore: {
+    name: "explore",
+    model: "alibaba-coding-plan-cn/MiniMax-M2.5",
+    fallback_models: ["zhipuai-coding-plan/glm-5-turbo"],
+    description: "Exploration agent for codebase search and discovery.",
+  },
+};
