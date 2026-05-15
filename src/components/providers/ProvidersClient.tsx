@@ -2,10 +2,10 @@
 
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
 import { ProviderList } from "@/components/providers/ProviderList";
-import type { Provider } from "@/lib/configReader";
+import type { Provider } from "@/types";
 
 interface ProvidersClientProps {
-  providers: Provider[];
+  providers: Record<string, Provider>;
 }
 
 export function ProvidersClient({ providers }: ProvidersClientProps) {

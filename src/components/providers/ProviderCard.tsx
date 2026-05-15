@@ -17,7 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { Provider } from "@/lib/configReader";
+import type { Provider } from "@/types";
 
 interface ProviderCardProps {
   provider: Provider;
@@ -34,11 +34,11 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             <CardTitle className="text-lg">{provider.name}</CardTitle>
             <Badge variant="secondary" className="w-fit font-mono text-xs">
               <Package className="mr-1 h-3 w-3" />
-              {provider.npmPackage}
+              {provider.npm}
             </Badge>
           </div>
           <Badge variant="outline" className="shrink-0">
-            {provider.models.length} model{provider.models.length !== 1 ? "s" : ""}
+            {Object.keys(provider.models).length} model{Object.keys(provider.models).length !== 1 ? "s" : ""}
           </Badge>
         </div>
       </CardHeader>
@@ -58,20 +58,20 @@ export function ProviderCard({ provider }: ProviderCardProps) {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="mt-3 space-y-2">
-              {provider.models.map((model) => (
+              {Object.entries(provider.models).map(([key, model]) => (
                 <div
-                  key={model.id}
+                  key={key}
                   className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
                 >
                   <span className="font-medium">{model.name}</span>
                   <div className="flex items-center gap-3">
                     {model.contextWindow && (
                       <Badge variant="secondary" className="text-xs">
-                        {model.contextWindow}
+                        {model.contextWindow.toLocaleString()}
                       </Badge>
                     )}
                     <code className="text-xs text-muted-foreground">
-                      {model.id}
+                      {key}
                     </code>
                   </div>
                 </div>
