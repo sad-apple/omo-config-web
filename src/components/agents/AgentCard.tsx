@@ -1,3 +1,4 @@
+import type { Agent } from "@/types";
 import {
   Card,
   CardContent,
@@ -11,24 +12,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Brain, Cpu, Layers } from "lucide-react";
-
-export interface FallbackModel {
-  provider: string;
-  model: string;
-}
-
-export interface Agent {
-  name: string;
-  model: string;
-  provider: string;
-  thinking?: {
-    enabled: boolean;
-    budget?: string;
-  };
-  fallbacks?: FallbackModel[];
-  variant?: string;
-}
+import { Brain, Cpu, Layers, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { parseModelRef } from "@/lib/model-ref";
 
 const PROVIDER_COLORS: Record<string, string> = {
   "alibaba-coding-plan-cn": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -55,13 +41,41 @@ function getProviderLabel(provider: string): string {
   return labels[provider] ?? provider;
 }
 
-export function AgentCard({ agent }: { agent: Agent }) {
+interface AgentCardProps {
+  agentKey: string;
+  agent: Agent;
+  onEdit?: () => void;
+  isDirty?: boolean;
+}
+
+export function AgentCard({ agentKey, agent, onEdit, isDirty }: AgentCardProps) {
+  const parsed = parseModelRef(agent.model);
+  const provider = parsed?.provider || "unknown";
+
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg capitalize">{agent.name}</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg capitalize">{agentKey}</CardTitle>
+            {isDirty && (
+              <span className="h-2 w-2 rounded-full bg-amber-500" title="Unsaved changes" />
+            )}
+          </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {agent.variant && (
               <Badge variant="secondary" className="text-xs">
                 {agent.variant}
@@ -69,9 +83,9 @@ export function AgentCard({ agent }: { agent: Agent }) {
             )}
             <Badge
               variant="outline"
-              className={`text-xs ${getProviderColor(agent.provider)}`}
+              className={`text-xs ${getProviderColor(provider)}`}
             >
-              {getProviderLabel(agent.provider)}
+              {getProviderLabel(provider)}
             </Badge>
           </div>
         </div>
@@ -81,12 +95,12 @@ export function AgentCard({ agent }: { agent: Agent }) {
         <div className="flex items-center gap-2">
           <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-sm font-mono text-muted-foreground">
-            {agent.provider}/{agent.model}
+            {agent.model}
           </span>
         </div>
 
         {/* Thinking Mode */}
-        {agent.thinking?.enabled && (
+        {agent.thinking?.type === "enabled" && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -94,7 +108,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
                   <Brain className="h-4 w-4 text-amber-500 shrink-0" />
                   <span className="text-sm text-amber-600 dark:text-amber-400">
                     Thinking
-                    {agent.thinking.budget && ` · ${agent.thinking.budget}`}
+                    {agent.thinking.budgetTokens && ` · ${agent.thinking.budgetTokens}`}
                   </span>
                 </div>
               </TooltipTrigger>
@@ -106,23 +120,23 @@ export function AgentCard({ agent }: { agent: Agent }) {
         )}
 
         {/* Fallback Models */}
-        {agent.fallbacks && agent.fallbacks.length > 0 && (
+        {agent.fallback_models && agent.fallback_models.length > 0 && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground">
-                    {agent.fallbacks.length} fallback{agent.fallbacks.length > 1 ? "s" : ""}
+                    {agent.fallback_models.length} fallback{agent.fallback_models.length > 1 ? "s" : ""}
                   </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="space-y-1">
                   <p className="font-medium">Fallback models:</p>
-                  {agent.fallbacks.map((fb, i) => (
+                  {agent.fallback_models.map((fb, i) => (
                     <p key={i} className="font-mono text-xs">
-                      {fb.provider}/{fb.model}
+                      {typeof fb === "string" ? fb : fb.model}
                     </p>
                   ))}
                 </div>

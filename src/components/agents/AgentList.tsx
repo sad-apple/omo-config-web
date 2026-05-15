@@ -1,48 +1,31 @@
-import { AgentCard, type Agent } from "./AgentCard";
+import type { Agent } from "@/types";
+import { AgentCard } from "./AgentCard";
 
-const MOCK_AGENTS: Agent[] = [
-  {
-    name: "sisyphus",
-    model: "qwen3.6-plus",
-    provider: "alibaba-coding-plan-cn",
-    thinking: {
-      enabled: true,
-      budget: "32K",
-    },
-    fallbacks: [
-      { provider: "zhipuai-coding-plan", model: "glm-5-turbo" },
-    ],
-    variant: "default",
-  },
-  {
-    name: "oracle",
-    model: "glm-5-turbo",
-    provider: "zhipuai-coding-plan",
-    thinking: {
-      enabled: true,
-      budget: "16K",
-    },
-  },
-  {
-    name: "librarian",
-    model: "MiniMax-M2.5",
-    provider: "alibaba-coding-plan-cn",
-  },
-  {
-    name: "explore",
-    model: "MiniMax-M2.5",
-    provider: "alibaba-coding-plan-cn",
-    fallbacks: [
-      { provider: "zhipuai-coding-plan", model: "glm-5-turbo" },
-    ],
-  },
-];
+interface AgentListProps {
+  agents: Record<string, Agent>;
+  onEditAgent?: (agentKey: string) => void;
+}
 
-export function AgentList() {
+export function AgentList({ agents, onEditAgent }: AgentListProps) {
+  const agentEntries = Object.entries(agents);
+
+  if (agentEntries.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">No agents configured. Import a configuration to get started.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {MOCK_AGENTS.map((agent) => (
-        <AgentCard key={agent.name} agent={agent} />
+      {agentEntries.map(([key, agent]) => (
+        <AgentCard
+          key={key}
+          agentKey={key}
+          agent={agent}
+          onEdit={onEditAgent ? () => onEditAgent(key) : undefined}
+        />
       ))}
     </div>
   );
