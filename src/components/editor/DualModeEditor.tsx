@@ -3,12 +3,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
-import { Eye, Code, Save, AlertCircle } from "lucide-react";
+import { Eye, Code, Save, AlertCircle, FileDiff } from "lucide-react";
 import { toast } from "sonner";
 import { useConfigStore, useIsDirty } from "@/store/configStore";
 import { useDraftRestore } from "@/hooks/useDraftRestore";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DiffPreview } from "./DiffPreview";
 
 interface DualModeEditorProps {
   children: React.ReactNode;
@@ -121,14 +122,24 @@ export function DualModeEditor({
         </div>
         <div className="flex items-center gap-2">
           {(hasUnsavedChanges || isDirty) && (
-            <Button
-              size="sm"
-              onClick={handleSave}
-              className="gap-1.5"
-            >
-              <Save className="h-3.5 w-3.5" />
-              Save
-            </Button>
+            <>
+              <DiffPreview
+                trigger={
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <FileDiff className="h-3.5 w-3.5" />
+                    Diff
+                  </Button>
+                }
+              />
+              <Button
+                size="sm"
+                onClick={handleSave}
+                className="gap-1.5"
+              >
+                <Save className="h-3.5 w-3.5" />
+                Save
+              </Button>
+            </>
           )}
         </div>
       </div>

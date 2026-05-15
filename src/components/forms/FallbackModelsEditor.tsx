@@ -116,7 +116,7 @@ export function FallbackModelsEditor({
           <div className="flex-1">
             <ModelSelector
               value={modelRef}
-              onChange={(ref) => updateFallback(index, ref)}
+              onChange={(ref: string) => updateFallback(index, ref)}
               providers={providers}
               placeholder="Select fallback model..."
             />

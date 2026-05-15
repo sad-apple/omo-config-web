@@ -27,6 +27,7 @@ interface ConfigState {
   createProfile: (profile: ConfigProfile) => void;
   updateProfile: (key: string, profile: Partial<ConfigProfile>) => void;
   deleteProfile: (key: string) => void;
+  renameProfile: (oldKey: string, newName: string) => void;
   setActiveProfile: (key: string | null) => void;
   addAgentToProfile: (profileKey: string, agentKey: string) => void;
   removeAgentFromProfile: (profileKey: string, agentKey: string) => void;
@@ -152,6 +153,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       return {
         configProfiles: rest,
         activeProfileId: state.activeProfileId === key ? null : state.activeProfileId,
+        isDirty: true,
+      };
+    }),
+
+  renameProfile: (oldKey, newName) =>
+    set((state) => {
+      const profile = state.configProfiles[oldKey];
+      if (!profile) return state;
+      if (oldKey === newName) return state;
+      if (state.configProfiles[newName]) return state;
+      const { [oldKey]: _, ...rest } = state.configProfiles;
+      const updatedProfile = { ...profile, name: newName };
+      return {
+        configProfiles: { ...rest, [newName]: updatedProfile },
+        activeProfileId: state.activeProfileId === oldKey ? newName : state.activeProfileId,
         isDirty: true,
       };
     }),

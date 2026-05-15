@@ -108,7 +108,7 @@ export function AgentConfigForm({
         <label className="text-sm font-medium">Primary Model</label>
         <ModelSelector
           value={form.watch("model")}
-          onChange={(val) => form.setValue("model", val)}
+          onChange={(val: string) => form.setValue("model", val)}
           providers={providers}
           placeholder="Select primary model..."
         />
@@ -171,7 +171,7 @@ export function AgentConfigForm({
             <label className="text-sm font-medium">Ultrawork Model</label>
             <ModelSelector
               value={form.watch("ultrawork")?.model || ""}
-              onChange={(val) => {
+              onChange={(val: string) => {
                 const parsed = parseModelRef(val);
                 if (parsed) {
                   form.setValue("ultrawork", {
@@ -190,7 +190,7 @@ export function AgentConfigForm({
             <label className="text-sm font-medium">Compaction Model</label>
             <ModelSelector
               value={form.watch("compaction")?.model || ""}
-              onChange={(val) => {
+              onChange={(val: string) => {
                 form.setValue("compaction", {
                   model: val,
                   variant: form.watch("compaction")?.variant,

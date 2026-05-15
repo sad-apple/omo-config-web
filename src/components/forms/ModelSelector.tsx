@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Provider } from "@/types";
 import { parseModelRef, formatModelRef, getAvailableModels } from "@/lib/model-ref";
+import { getProviderColor } from "@/lib/provider-colors";
 
 interface ModelSelectorProps {
   value: string;
@@ -28,19 +29,6 @@ interface ModelSelectorProps {
   providers: Record<string, Provider>;
   placeholder?: string;
   className?: string;
-}
-
-// Provider color mapping for visual distinction
-const PROVIDER_COLORS: Record<string, string> = {
-  openai: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  anthropic: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  deepseek: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  alibaba: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  zhipuai: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
-};
-
-function getProviderColor(providerKey: string): string {
-  return PROVIDER_COLORS[providerKey] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
 }
 
 export function ModelSelector({
