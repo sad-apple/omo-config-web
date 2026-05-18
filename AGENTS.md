@@ -114,5 +114,5 @@ Provider badge colors are defined in `AgentCard.tsx` and duplicated in `Draggabl
 - **Phase 1** (MVP): ✅ Complete — Read-only display, sidebar, dual-mode editor
 - **Phase 2** (Editable Forms): ✅ Complete — Agent/model/provider editing, dirty tracking, draft restore
 - **Phase 3** (Config Profiles): ✅ Complete — Profile CRUD, drag-drop assignment, runtime config forms
-- **Phase 4** (Publish Management): 🔲 TODO — Diff preview, write to config files, rollback
+- **Phase 4** (Publish Management): ✅ Complete — Diff preview, write to config files, publish history, rollback, JSONC preservation
 - **Phase 5** (Enhancements): 🔲 TODO — Health checks, templates, themes, keyboard shortcuts

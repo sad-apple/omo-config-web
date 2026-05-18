@@ -1,7 +1,7 @@
 # OMO Config Web — Development Progress
 
-> Last updated: 2026-05-15 | Phase 4 Complete
-> Build: ✅ Passes | 6 static pages generated
+> Last updated: 2026-05-18 | Phase 4 Complete (Publish Management)
+> Build: ✅ Passes | 6 static pages + 2 API routes
 
 ---
 
@@ -184,29 +184,61 @@ src/components/layout/Sidebar.tsx                    # Added /profiles route wit
 ### Build Status
 - `pnpm build` passes — 6 static pages: /, /_not-found, /agents, /models, /profiles, /providers
 
-## Future Phases
+## Phase 4 (Publish Management) — Complete
 
-### Phase 3: Config Profiles
-- Config profile create/clone (new UI)
-- Drag-drop Agent assignment to profiles (dnd-kit)
-- Category drag-drop assignment
-- background_task / runtime_fallback parameter forms
-- Profile enable/disable UI
+### Architecture Decisions
 
-### Phase 4: Publish Management
-- Diff preview (Monaco diff mode) before publishing
-- Write config to `~/.config/opencode/opencode.json` + `oh-my-openagent.jsonc`
-- Publish history tracking
-- Rollback support
-- JSONC comment preservation via jsonc-parser modify() API
+| Decision | Details |
+|----------|---------|
+| API Routes | Next.js API routes for file I/O (NOT static export). App requires Node.js server runtime. |
+| JSONC Preservation | jsonc-parser modify() API with sequential edit-apply pattern to avoid offset corruption |
+| Config Split | opencode.json → providers; oh-my-openagent.jsonc → agents, categories, profiles, runtime config, tmux, team_mode |
+| Publish History | localStorage-backed, capped at 50 snapshots. Zustand store + usePublishHistory hook. |
+| Rollback | Restore snapshot → importFromJson → re-publish to disk |
+| Diff Preview | Already built in Phase 4 initial commit. Compares current state vs lastSavedSnapshot. |
 
-### Phase 5: Enhancements
+### New Dependencies
+```json
+{ "jsonc-parser": "^3.3.1" }
+```
+
+### New Files (12)
+```
+src/app/api/config/route.ts              # GET: read config files from disk
+src/app/api/config/publish/route.ts      # POST: write config files to disk (JSONC-aware)
+src/lib/config-paths.ts                  # Config file path resolution (~/.config/opencode/*)
+src/lib/config-splitter.ts               # Split OmoConfig into opencode.json + oh-my-openagent.jsonc
+src/lib/config-merger.ts                 # Merge disk config back into OmoConfig store shape
+src/lib/jsonc-writer.ts                  # JSONC-aware merge writer (preserves comments)
+src/hooks/usePublish.ts                  # Publish flow hook (split → POST → snapshot → toast)
+src/hooks/usePublishHistory.ts           # Publish history management (localStorage sync)
+src/components/editor/PublishButton.tsx  # Publish button for DualModeEditor header
+src/components/editor/PublishDialog.tsx  # Publish confirmation dialog with diff preview
+src/components/editor/PublishHistory.tsx # Publish history list with rollback buttons
+docs/superpowers/plans/2026-05-18-phase4-publish-management.md  # Implementation plan
+```
+
+### Modified Files (7)
+```
+package.json                             # Added jsonc-parser dependency
+src/types/index.ts                       # Added PublishSnapshot type
+src/store/configStore.ts                 # Added publishHistory state, addPublishSnapshot, clearPublishHistory
+src/components/editor/DualModeEditor.tsx # Added PublishDialog + PublishHistory to header
+src/components/editor/ImportExportButtons.tsx # Added Load from Disk button
+src/lib/configReader.ts                  # Replaced mock with API route call + fallback
+```
+
+### Build Status
+- `pnpm build` passes — 6 static pages + 2 dynamic API routes
+- API routes: /api/config (GET), /api/config/publish (POST)
+
+## Phase 5 (Enhancements) — TODO
+
 - Provider health checks (ping API to validate keys)
 - Config profile templates
 - Dark/light theme toggle
 - Keyboard shortcuts
 - Monaco ↔ Visual bidirectional sync (deferred from Phase 2)
-
 ---
 
 ## Key Architecture Reference
