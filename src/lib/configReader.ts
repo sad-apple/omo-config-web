@@ -1,11 +1,24 @@
 import type { Provider, Model } from "@/types";
+import { mergeConfig } from "@/lib/config-merger";
+import type { OpencodeJsonFile, OmoJsoncFile } from "@/lib/config-splitter";
 
 /**
- * Read providers from opencode.json.
- * TODO: Replace mock with actual file reader.
+ * Read providers from opencode.json via API route.
+ * Falls back to MOCK_PROVIDERS if the API call fails.
  */
 export async function readProviders(): Promise<Record<string, Provider>> {
-  return MOCK_PROVIDERS;
+  try {
+    const response = await fetch('/api/config');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const merged = mergeConfig(data.opencode as OpencodeJsonFile, data.omo as OmoJsoncFile);
+    return merged.providers ?? MOCK_PROVIDERS;
+  } catch {
+    // Fall back to mock data if API call fails
+    return MOCK_PROVIDERS;
+  }
 }
 
 const MOCK_PROVIDERS: Record<string, Provider> = {

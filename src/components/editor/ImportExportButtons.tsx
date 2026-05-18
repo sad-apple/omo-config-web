@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Download, Upload, FileJson, X } from 'lucide-react';
+import { Download, Upload, FileJson, X, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/dialog';
 import { useConfigExport } from '@/hooks/useConfigExport';
 import { useConfigImport } from '@/hooks/useConfigImport';
+import { useConfigStore } from '@/store/configStore';
+import { mergeConfig } from '@/lib/config-merger';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function ImportExportButtons() {
@@ -29,6 +32,8 @@ export function ImportExportButtons() {
     handleDrop,
     handleDragOver,
   } = useConfigImport();
+  const importFromJson = useConfigStore((state) => state.importFromJson);
+  const [isLoadingDisk, setIsLoadingDisk] = useState(false);
 
   const handleDropZone = (e: React.DragEvent) => {
     e.preventDefault();
@@ -60,10 +65,43 @@ export function ImportExportButtons() {
       setIsDragOver(false);
     }
   };
+  const handleLoadFromDisk = async () => {
+    setIsLoadingDisk(true);
+    try {
+      const response = await fetch('/api/config');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const merged = mergeConfig(data.opencode, data.omo);
+      const json = JSON.stringify(merged, null, 2);
+      importFromJson(json);
+      toast.success('Configuration loaded from disk', {
+        description: `Loaded ${Object.keys(data.opencode?.providers ?? {}).length} providers, ${Object.keys(data.omo?.agents ?? {}).length} agents`,
+      });
+    } catch (error) {
+      toast.error('Failed to load from disk', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsLoadingDisk(false);
+    }
+  };
+
 
   return (
     <div className="flex items-center gap-2">
-      {/* Import Dialog */}
+      {/* Load from Disk Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleLoadFromDisk}
+        disabled={isLoadingDisk}
+      >
+        <FolderOpen className="h-4 w-4" />
+        {isLoadingDisk ? 'Loading...' : 'Load from Disk'}
+      </Button>
+
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">

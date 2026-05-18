@@ -10,6 +10,8 @@ import { useDraftRestore } from "@/hooks/useDraftRestore";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DiffPreview } from "./DiffPreview";
+import { PublishDialog } from "./PublishDialog";
+import { PublishHistory } from "./PublishHistory";
 
 interface DualModeEditorProps {
   children: React.ReactNode;
@@ -121,6 +123,7 @@ export function DualModeEditor({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <PublishHistory />
           {(hasUnsavedChanges || isDirty) && (
             <>
               <DiffPreview
@@ -139,6 +142,7 @@ export function DualModeEditor({
                 <Save className="h-3.5 w-3.5" />
                 Save
               </Button>
+              <PublishDialog />
             </>
           )}
         </div>

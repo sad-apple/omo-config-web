@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig } from '@/types';
+import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig, PublishSnapshot } from '@/types';
 
 interface ConfigState {
   // State
@@ -14,6 +14,7 @@ interface ConfigState {
   rawJson: string | null;
   isDirty: boolean;
   lastSavedSnapshot: string;
+  publishHistory: PublishSnapshot[];
 
   // Actions
   setProviders: (providers: Record<string, Provider>) => void;
@@ -42,6 +43,9 @@ interface ConfigState {
   setLastSavedSnapshot: () => void;
   discardChanges: () => void;
   getIsDirty: () => boolean;
+  // Publish history actions
+  addPublishSnapshot: (snapshot: PublishSnapshot) => void;
+  clearPublishHistory: () => void;
 }
 
 const initialState = {
@@ -56,6 +60,7 @@ const initialState = {
   rawJson: null,
   isDirty: false,
   lastSavedSnapshot: '',
+  publishHistory: [],
 };
 
 function createSnapshot(state: ConfigState): string {
@@ -329,6 +334,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   getIsDirty: () => get().isDirty,
+
+  addPublishSnapshot: (snapshot) =>
+    set((state) => ({
+      publishHistory: [snapshot, ...state.publishHistory].slice(0, 50),
+    })),
+
+  clearPublishHistory: () => set({ publishHistory: [] }),
 }));
 
 // Convenience selectors
@@ -340,3 +352,4 @@ export const useConfigProfiles = () => useConfigStore((state) => state.configPro
 export const useActiveProfileId = () => useConfigStore((state) => state.activeProfileId);
 export const useBackgroundTask = () => useConfigStore((state) => state.backgroundTask);
 export const useRuntimeFallback = () => useConfigStore((state) => state.runtimeFallback);
+export const usePublishHistory = () => useConfigStore((state) => state.publishHistory);

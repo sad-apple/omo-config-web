@@ -151,3 +151,16 @@ export interface OmoConfig {
   tmux?: TmuxConfig;
   team_mode?: TeamModeConfig;
 }
+
+// === Publish History ===
+
+export interface PublishSnapshot {
+  id: string;
+  timestamp: number;
+  /** The full config JSON at time of publish */
+  snapshot: string;
+  /** Summary of what changed (human-readable) */
+  summary: string;
+  /** Which files were written */
+  filesWritten: string[];
+}
