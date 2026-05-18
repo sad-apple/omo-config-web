@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
-import { Eye, Code, Save, AlertCircle, FileDiff } from "lucide-react";
+import { Eye, Code, Save, AlertCircle, FileDiff, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { useConfigStore, useIsDirty } from "@/store/configStore";
 import { useDraftRestore } from "@/hooks/useDraftRestore";
@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { DiffPreview } from "./DiffPreview";
 import { PublishDialog } from "./PublishDialog";
 import { PublishHistory } from "./PublishHistory";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
+import { debounce } from "@/lib/debounce";
 
 interface DualModeEditorProps {
   children: React.ReactNode;
@@ -29,6 +32,7 @@ export function DualModeEditor({
   const isDirty = useIsDirty();
   const setLastSavedSnapshot = useConfigStore((state) => state.setLastSavedSnapshot);
   const exportToJson = useConfigStore((state) => state.exportToJson);
+  const importFromJson = useConfigStore((state) => state.importFromJson);
   const { showRestoreDialog, draftData, restoreDraft, discardDraft, saveDraft } = useDraftRestore();
 
   const [mode, setMode] = useState<"visual" | "json">("visual");
@@ -36,7 +40,33 @@ export function DualModeEditor({
     JSON.stringify(jsonValue, null, 2)
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [hasJsonError, setHasJsonError] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
 
+  // Ref to track the latest jsonString for the debounced sync
+  const jsonStringRef = useRef(jsonString);
+  jsonStringRef.current = jsonString;
+
+  // Debounced sync from JSON editor to store (300ms)
+  const debouncedSyncToStore = useRef(
+    debounce((val: string) => {
+      try {
+        const parsed = JSON.parse(val);
+        onJsonChange?.(parsed);
+        setHasJsonError(false);
+      } catch {
+        setHasJsonError(true);
+        toast.error("Invalid JSON — changes not synced to store");
+      }
+    }, 300)
+  ).current;
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSyncToStore.cancel();
+    };
+  }, [debouncedSyncToStore]);
   // Handle beforeunload warning
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -58,26 +88,36 @@ export function DualModeEditor({
     }
   }, [isDirty, exportToJson, saveDraft]);
 
-  // Sync when jsonValue prop changes externally
-  const prevJsonValueRef = useState(jsonValue)[0];
-  if (jsonValue !== prevJsonValueRef) {
-    setJsonString(JSON.stringify(jsonValue, null, 2));
-    setHasUnsavedChanges(false);
-  }
+  // Sync when jsonValue prop changes externally (visual → JSON)
+  const prevJsonValueRef = useRef(jsonValue);
+  useEffect(() => {
+    if (jsonValue !== prevJsonValueRef.current) {
+      setJsonString(JSON.stringify(jsonValue, null, 2));
+      setHasUnsavedChanges(false);
+      prevJsonValueRef.current = jsonValue;
+    }
+  }, [jsonValue]);
 
+  // Monaco → Store sync (debounced)
   const handleJsonChange = useCallback((value: string) => {
-    setJsonString(value);
-    setHasUnsavedChanges(true);
-  }, []);
+      setJsonString(value);
+      setHasUnsavedChanges(true);
+      debouncedSyncToStore(value);
+    },
+    [debouncedSyncToStore]
+  );
 
+  // Handle Apply button (explicit confirmation fallback)
   const handleApplyChanges = useCallback(
     (value: string) => {
       try {
         const parsed = JSON.parse(value);
         onJsonChange?.(parsed);
         setHasUnsavedChanges(false);
+        setHasJsonError(false);
         toast.success("Changes applied successfully");
       } catch (e) {
+        setHasJsonError(true);
         toast.error("Invalid JSON: " + (e as Error).message);
       }
     },
@@ -89,10 +129,79 @@ export function DualModeEditor({
     toast.success("Configuration saved");
   }, [setLastSavedSnapshot]);
 
+  // Keyboard shortcuts
+  const { showShortcutsDialog, setShowShortcutsDialog } = useKeyboardShortcuts({
+    onToggleDiff: () => setDiffOpen((prev) => !prev),
+    onImport: () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const json = ev.target?.result as string;
+            if (json) {
+              try {
+                importFromJson(json);
+                toast.success("Configuration imported");
+              } catch {
+                toast.error("Invalid JSON file");
+              }
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+      input.click();
+    },
+  });
+
+  // Handle tab switching with sync
+  const handleModeChange = useCallback(
+    (newMode: string) => {
+      const target = newMode as "visual" | "json";
+
+      if (target === "json") {
+        // Switching to JSON: refresh Monaco content from store
+        const currentJson = exportToJson();
+        setJsonString(currentJson);
+        setHasUnsavedChanges(false);
+      } else if (target === "visual") {
+        // Switching to Visual: apply any pending Monaco changes first
+        debouncedSyncToStore.cancel();
+        try {
+          const parsed = JSON.parse(jsonStringRef.current);
+          onJsonChange?.(parsed);
+          setHasJsonError(false);
+        } catch {
+          // If JSON is invalid, don't sync — just switch
+          setHasJsonError(true);
+          toast.error("Invalid JSON — visual mode shows last valid state");
+        }
+      }
+
+      setMode(target);
+    },
+    [exportToJson, onJsonChange, debouncedSyncToStore]
+  );
+
+  // Listen for toggle-editor-mode custom event (from keyboard shortcuts)
+  useEffect(() => {
+    const handler = () => {
+      const newMode = mode === "visual" ? "json" : "visual";
+      handleModeChange(newMode);
+    };
+    window.addEventListener("toggle-editor-mode", handler);
+    return () => window.removeEventListener("toggle-editor-mode", handler);
+  }, [mode, handleModeChange]);
+
+
   return (
     <Tabs
       value={mode}
-      onValueChange={(v) => setMode(v as "visual" | "json")}
+      onValueChange={handleModeChange}
       className="flex flex-1 flex-col"
     >
       {/* Mode Toggle Header */}
@@ -123,6 +232,14 @@ export function DualModeEditor({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+            onClick={() => setShowShortcutsDialog(true)}
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+          </Button>
           <PublishHistory />
           {(hasUnsavedChanges || isDirty) && (
             <>
@@ -189,6 +306,12 @@ export function DualModeEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <KeyboardShortcutsDialog
+        open={showShortcutsDialog}
+        onOpenChange={setShowShortcutsDialog}
+      />
     </Tabs>
   );
 }

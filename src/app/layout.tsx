@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar, SidebarProvider } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,8 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background text-foreground">
+      <body className="min-h-full bg-background text-foreground transition-colors duration-300">
+        <ThemeProvider>
         <SidebarProvider>
           <div className="flex min-h-full flex-col lg:flex-row">
             <Sidebar />
@@ -41,6 +43,7 @@ export default function RootLayout({
           </div>
         </SidebarProvider>
         <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

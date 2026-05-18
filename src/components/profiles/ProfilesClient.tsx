@@ -5,6 +5,8 @@ import { useConfigStore } from "@/store/configStore";
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
 import { ProfileConfigSheet } from "@/components/profiles/ProfileConfigSheet";
 import { ProfileAssignmentBoard } from "@/components/profiles/ProfileAssignmentBoard";
+import { TemplateGallery } from "@/components/profiles/TemplateGallery";
+import type { ConfigTemplate } from "@/lib/config-templates";
 import { toast } from "sonner";
 import {
   Card,
@@ -14,11 +16,13 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Play, Bot, Layers, ChevronLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2, Play, Bot, Layers, ChevronLeft, Sparkles } from "lucide-react";
 
 export function ProfilesClient() {
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [editingProfileKey, setEditingProfileKey] = React.useState<string | null>(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false);
   const [selectedProfileKey, setSelectedProfileKey] = React.useState<string | null>(null);
 
   const configProfiles = useConfigStore((state) => state.configProfiles);
@@ -101,10 +105,16 @@ export function ProfilesClient() {
                 </div>
               </div>
               {!selectedProfileKey && (
-                <Button onClick={handleCreate} className="gap-1.5 shrink-0">
-                  <Plus className="h-4 w-4" />
-                  Create Profile
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" onClick={() => setTemplateDialogOpen(true)} className="gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    From Template
+                  </Button>
+                  <Button onClick={handleCreate} className="gap-1.5">
+                    <Plus className="h-4 w-4" />
+                    Create Profile
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -221,6 +231,29 @@ export function ProfilesClient() {
         }}
         profileKey={editingProfileKey}
       />
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Choose a Template</DialogTitle>
+            <DialogDescription>
+              Select a template to pre-populate your configuration with agents, categories, and profiles.
+            </DialogDescription>
+          </DialogHeader>
+          <TemplateGallery
+            onSelect={(template: ConfigTemplate) => {
+              const store = useConfigStore.getState();
+              store.setAgents({ ...store.agents, ...template.agents });
+              store.setCategories({ ...store.categories, ...template.categories });
+              Object.entries(template.configProfiles).forEach(([, profile]) => {
+                store.createProfile(profile);
+              });
+              store.setLastSavedSnapshot();
+              setTemplateDialogOpen(false);
+              toast.success(`Template "${template.name}" applied`);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
