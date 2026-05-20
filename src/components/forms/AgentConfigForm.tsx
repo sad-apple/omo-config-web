@@ -18,32 +18,8 @@ import { VariantSelector } from "./VariantSelector";
 import { FallbackModelsEditor } from "./FallbackModelsEditor";
 import { ModelParamsForm } from "./ModelParamsForm";
 
-const agentSchema = z.object({
-  model: z.string().min(1, "Model is required"),
-  fallback_models: z.array(z.string()).optional(),
-  thinking: z
-    .object({
-      type: z.enum(["enabled", "disabled"]),
-      budgetTokens: z.number().optional(),
-    })
-    .optional(),
-  variant: z.string().optional(),
-  ultrawork: z
-    .object({
-      model: z.string(),
-      variant: z.string().optional(),
-    })
-    .optional(),
-  compaction: z
-    .object({
-      model: z.string(),
-      variant: z.string().optional(),
-    })
-    .optional(),
-  description: z.string().optional(),
-});
+import { agentSchema, type AgentFormValues } from "./agentSchema";
 
-type AgentFormValues = z.infer<typeof agentSchema>;
 
 interface AgentConfigFormProps {
   agent: Agent;
