@@ -1,22 +1,34 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useConfigStore } from "@/store/configStore";
 import { splitConfig } from "@/lib/config-splitter";
 import { toast } from "sonner";
 import type { PublishSnapshot } from "@/types";
 
+interface ConflictData {
+  serverEtags: { opencode: string | null; omo: string | null };
+}
+
 /**
  * Hook for publishing configuration to disk.
- * Returns { publish, isPublishing }.
+ * Returns { publish, isPublishing, conflictDialog, handleConflictResolution }.
  */
 export function usePublish() {
   const [isPublishing, setIsPublishing] = useState(false);
+  const [conflictDialog, setConflictDialog] = useState<ConflictData | null>(null);
+  const pendingPublishRef = useRef<{ config: Record<string, unknown>; json: string } | null>(null);
   const exportToJson = useConfigStore((s) => s.exportToJson);
   const addPublishSnapshot = useConfigStore((s) => s.addPublishSnapshot);
   const setLastSavedSnapshot = useConfigStore((s) => s.setLastSavedSnapshot);
+  const etagsRef = useRef<{ opencode: string | null; omo: string | null }>({ opencode: null, omo: null });
 
-  const publish = useCallback(async () => {
+  /** Update etags from API response */
+  const updateEtags = useCallback((newEtags: { opencode: string | null; omo: string | null }) => {
+    etagsRef.current = newEtags;
+  }, []);
+
+  const publish = useCallback(async (force = false) => {
     if (isPublishing) return;
 
     setIsPublishing(true);
@@ -26,15 +38,19 @@ export function usePublish() {
       const json = exportToJson();
       const config = JSON.parse(json);
 
-      // Split into opencode.json and oh-my-openagent.jsonc
-      const { opencodeJson, omoJsonc } = splitConfig(config);
-
-      // POST to API route
+      // POST to API route with etags
       const response = await fetch("/api/config/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config, etags: etagsRef.current, force }),
       });
+
+      if (response.status === 409) {
+        const conflictData = await response.json();
+        setConflictDialog(conflictData);
+        pendingPublishRef.current = { config, json };
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
@@ -45,6 +61,11 @@ export function usePublish() {
 
       if (!result.success) {
         throw new Error(result.error || "Publish failed");
+      }
+
+      // Update etags after successful publish
+      if (result.etags) {
+        updateEtags(result.etags);
       }
 
       // Create publish snapshot
@@ -69,7 +90,33 @@ export function usePublish() {
     } finally {
       setIsPublishing(false);
     }
-  }, [isPublishing, exportToJson, addPublishSnapshot, setLastSavedSnapshot]);
+  }, [isPublishing, exportToJson, addPublishSnapshot, setLastSavedSnapshot, updateEtags]);
 
-  return { publish, isPublishing };
+  /** Force overwrite after conflict */
+  const handleOverwrite = useCallback(async () => {
+    setConflictDialog(null);
+    if (pendingPublishRef.current) {
+      await publish(true);
+      pendingPublishRef.current = null;
+    }
+  }, [publish]);
+
+  /** Reload config from server */
+  const handleReload = useCallback(() => {
+    setConflictDialog(null);
+    pendingPublishRef.current = null;
+    window.location.reload();
+  }, []);
+
+  /** Open merge mode (switch to JSON editor) */
+  const handleMerge = useCallback(() => {
+    setConflictDialog(null);
+    // Signal to DualModeEditor to show diff/merge view
+    window.dispatchEvent(new CustomEvent("config:conflict-merge", {
+      detail: pendingPublishRef.current?.config,
+    }));
+    pendingPublishRef.current = null;
+  }, []);
+
+  return { publish, isPublishing, conflictDialog, handleOverwrite, handleReload, handleMerge, updateEtags };
 }
