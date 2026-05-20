@@ -61,12 +61,16 @@ export function mergeJsonc(
  * For new files, there's no existing content to preserve, so just use JSON.stringify.
  *
  * @param newData - The new data to write
- * @param isJsonc - Whether the file is JSONC (currently unused, but for future extension)
+ * @param isJsonc - Whether to output with JSONC comment header
  * @returns The stringified content
  */
 export function writeNewConfig(
   newData: Record<string, unknown>,
-  isJsonc: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
+  isJsonc: boolean,
 ): string {
+  if (isJsonc) {
+    // For JSONC files, add a comment header to distinguish from plain JSON
+    return "// OMO Config\n" + JSON.stringify(newData, null, 2) + "\n";
+  }
   return JSON.stringify(newData, null, 2) + "\n";
 }

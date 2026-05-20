@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig, PublishSnapshot } from '@/types';
+import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig, PublishSnapshot, TmuxConfig, TeamModeConfig } from '@/types';
 
 interface ConfigState {
   // State
@@ -11,6 +11,8 @@ interface ConfigState {
   configProfile: ConfigProfile | null;
   backgroundTask: BackgroundTaskConfig | null;
   runtimeFallback: RuntimeFallbackConfig | null;
+  tmux: TmuxConfig | null;
+  teamMode: TeamModeConfig | null;
   rawJson: string | null;
   isDirty: boolean;
   lastSavedSnapshot: string;
@@ -57,6 +59,8 @@ const initialState = {
   configProfile: null,
   backgroundTask: null,
   runtimeFallback: null,
+  tmux: null,
+  teamMode: null,
   rawJson: null,
   isDirty: false,
   lastSavedSnapshot: '',
@@ -71,6 +75,8 @@ function createSnapshot(state: ConfigState): string {
     configProfiles: state.configProfiles,
     backgroundTask: state.backgroundTask,
     runtimeFallback: state.runtimeFallback,
+    tmux: state.tmux,
+    teamMode: state.teamMode,
   }, null, 2);
 }
 
@@ -252,11 +258,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setRuntimeFallback: (config) => set({ runtimeFallback: config, isDirty: true }),
 
   importFromJson: (json) => {
-    const parsed = JSON.parse(json) as OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile>; background_task?: BackgroundTaskConfig; runtime_fallback?: RuntimeFallbackConfig };
+    const parsed = JSON.parse(json) as OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile>; background_task?: BackgroundTaskConfig; runtime_fallback?: RuntimeFallbackConfig; tmux?: TmuxConfig; team_mode?: TeamModeConfig };
     const providers = parsed.providers ?? {};
     const configProfiles = parsed.configProfiles ?? {};
     const backgroundTask = parsed.background_task ?? null;
     const runtimeFallback = parsed.runtime_fallback ?? null;
+    const tmux = parsed.tmux ?? null;
+    const teamMode = parsed.team_mode ?? null;
 
     const newState = {
       agents: parsed.agents ?? {},
@@ -265,6 +273,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       configProfiles,
       backgroundTask,
       runtimeFallback,
+      tmux,
+      teamMode,
       rawJson: json,
       isDirty: false,
       lastSavedSnapshot: JSON.stringify({
@@ -274,6 +284,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         configProfiles,
         backgroundTask,
         runtimeFallback,
+        tmux,
+        teamMode,
       }, null, 2),
     };
 
@@ -282,7 +294,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   exportToJson: () => {
-    const { agents, categories, providers, configProfiles, backgroundTask, runtimeFallback } = get();
+    const { agents, categories, providers, configProfiles, backgroundTask, runtimeFallback, tmux, teamMode } = get();
     const config: OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile> } = {
       agents,
       categories,
@@ -290,6 +302,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       configProfiles,
       ...(backgroundTask ? { background_task: backgroundTask } : {}),
       ...(runtimeFallback ? { runtime_fallback: runtimeFallback } : {}),
+      ...(tmux ? { tmux } : {}),
+      ...(teamMode ? { team_mode: teamMode } : {}),
     };
     const json = JSON.stringify(config, null, 2);
     set({ rawJson: json });
@@ -317,6 +331,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         configProfiles: parsed.configProfiles ?? {},
         backgroundTask: parsed.backgroundTask ?? null,
         runtimeFallback: parsed.runtimeFallback ?? null,
+        tmux: parsed.tmux ?? null,
+        teamMode: parsed.teamMode ?? null,
         isDirty: false,
       });
     } catch {
@@ -328,6 +344,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         configProfiles: {},
         backgroundTask: null,
         runtimeFallback: null,
+        tmux: null,
+        teamMode: null,
         isDirty: false,
       });
     }
@@ -353,3 +371,5 @@ export const useActiveProfileId = () => useConfigStore((state) => state.activePr
 export const useBackgroundTask = () => useConfigStore((state) => state.backgroundTask);
 export const useRuntimeFallback = () => useConfigStore((state) => state.runtimeFallback);
 export const usePublishHistory = () => useConfigStore((state) => state.publishHistory);
+export const useTmux = () => useConfigStore((state) => state.tmux);
+export const useTeamMode = () => useConfigStore((state) => state.teamMode);
