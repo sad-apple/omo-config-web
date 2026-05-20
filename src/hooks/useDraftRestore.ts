@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useConfigStore } from "@/store/configStore";
 
 const DRAFT_KEY = "omo-config-draft";
@@ -11,37 +11,39 @@ interface DraftData {
 }
 
 export function useDraftRestore() {
-  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-  const [draftData, setDraftData] = useState<DraftData | null>(null);
-  const importFromJson = useConfigStore((state) => state.importFromJson);
+  const [draftState] = useState<DraftData | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-  useEffect(() => {
-    // Check for draft in localStorage on mount
     const stored = localStorage.getItem(DRAFT_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as DraftData;
         if (parsed.json && parsed.timestamp) {
-          setDraftData(parsed);
-          setShowRestoreDialog(true);
+          return parsed;
         }
       } catch {
-        // Invalid draft data, clear it
+        console.error("[draftRestore] Failed to parse draft, removing invalid entry");
         localStorage.removeItem(DRAFT_KEY);
       }
     }
-  }, []);
+    return null;
+  });
+  const [showRestoreDialog, setShowRestoreDialog] = useState(draftState !== null);
+  const [draftData, setDraftData] = useState<DraftData | null>(draftState);
+  const importFromJson = useConfigStore((state) => state.importFromJson);
 
   const restoreDraft = () => {
     if (draftData?.json) {
       importFromJson(draftData.json);
-      localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(DRAFT_KEY);
       setShowRestoreDialog(false);
     }
   };
 
   const discardDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+    window.localStorage.removeItem(DRAFT_KEY);
     setShowRestoreDialog(false);
   };
 
@@ -50,7 +52,7 @@ export function useDraftRestore() {
       json,
       timestamp: Date.now(),
     };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   };
 
   return {

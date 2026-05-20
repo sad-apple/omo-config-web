@@ -62,7 +62,7 @@ export function VariantSelector({ value, onChange }: VariantSelectorProps) {
         </SelectContent>
       </Select>
       <p className="text-sm text-muted-foreground">
-        Select a model variant for enhanced capabilities. Leave as "No Override" to use defaults.
+        Select a model variant for enhanced capabilities. Leave as &quot;No Override&quot; to use defaults.
       </p>
     </div>
   );

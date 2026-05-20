@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 
 import { Slider } from "@/components/ui/slider";
@@ -49,59 +49,23 @@ export function ModelParamsForm({
   onChange,
   modelName,
 }: ModelParamsFormProps) {
-  const [temperature, setTemperature] = useState(
-    values?.temperature ?? DEFAULTS.temperature
-  );
-  const [maxTokens, setMaxTokens] = useState(
-    values?.maxTokens ?? DEFAULTS.maxTokens
-  );
-  const [topP, setTopP] = useState(values?.topP ?? DEFAULTS.topP);
-
-  useEffect(() => {
-    if (values) {
-      setTemperature(values.temperature ?? DEFAULTS.temperature);
-      setMaxTokens(values.maxTokens ?? DEFAULTS.maxTokens);
-      setTopP(values.topP ?? DEFAULTS.topP);
-    }
-  }, [values]);
+  const temperature = values?.temperature ?? DEFAULTS.temperature;
+  const maxTokens = values?.maxTokens ?? DEFAULTS.maxTokens;
+  const topP = values?.topP ?? DEFAULTS.topP;
 
   const handleTemperatureChange = (newValue: number[]) => {
-    const val = newValue[0];
-    setTemperature(val);
-    onChange({
-      ...values,
-      temperature: val,
-      maxTokens,
-      topP,
-    });
+    onChange({ ...values, temperature: newValue[0] });
   };
 
   const handleMaxTokensChange = (newValue: number[]) => {
-    const val = newValue[0];
-    setMaxTokens(val);
-    onChange({
-      ...values,
-      temperature,
-      maxTokens: val,
-      topP,
-    });
+    onChange({ ...values, maxTokens: newValue[0] });
   };
 
   const handleTopPChange = (newValue: number[]) => {
-    const val = newValue[0];
-    setTopP(val);
-    onChange({
-      ...values,
-      temperature,
-      maxTokens,
-      topP: val,
-    });
+    onChange({ ...values, topP: newValue[0] });
   };
 
   const handleReset = () => {
-    setTemperature(DEFAULTS.temperature);
-    setMaxTokens(DEFAULTS.maxTokens);
-    setTopP(DEFAULTS.topP);
     onChange({
       temperature: DEFAULTS.temperature,
       maxTokens: DEFAULTS.maxTokens,

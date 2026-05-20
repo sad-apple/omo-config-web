@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Brain } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -19,27 +19,12 @@ const BUDGET_STEP = 1024;
 const DEFAULT_BUDGET = 8192;
 
 export function ThinkingConfigForm({ value, onChange }: ThinkingConfigFormProps) {
-  const [enabled, setEnabled] = useState(value?.type === "enabled");
-  const [budgetTokens, setBudgetTokens] = useState(
-    value?.budgetTokens ?? DEFAULT_BUDGET
-  );
-
-  useEffect(() => {
-    if (value?.type === "enabled") {
-      setEnabled(true);
-      setBudgetTokens(value.budgetTokens ?? DEFAULT_BUDGET);
-    } else {
-      setEnabled(false);
-    }
-  }, [value]);
+  const enabled = value?.type === "enabled";
+  const budgetTokens = value?.budgetTokens ?? DEFAULT_BUDGET;
 
   const handleEnabledChange = (checked: boolean) => {
-    setEnabled(checked);
     if (checked) {
-      onChange({
-        type: "enabled",
-        budgetTokens: budgetTokens,
-      });
+      onChange({ type: "enabled", budgetTokens });
     } else {
       onChange({ type: "disabled", budgetTokens: 0 });
     }
@@ -47,12 +32,8 @@ export function ThinkingConfigForm({ value, onChange }: ThinkingConfigFormProps)
 
   const handleBudgetChange = (newBudget: number) => {
     const clampedBudget = Math.min(MAX_BUDGET, Math.max(MIN_BUDGET, newBudget));
-    setBudgetTokens(clampedBudget);
     if (enabled) {
-      onChange({
-        type: "enabled",
-        budgetTokens: clampedBudget,
-      });
+      onChange({ type: "enabled", budgetTokens: clampedBudget });
     }
   };
 

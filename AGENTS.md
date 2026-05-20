@@ -110,12 +110,12 @@ Any component using `useConfigStore` must be a client component (`"use client"`)
 - Config splitter/merger (`config-splitter.ts` / `config-merger.ts`) maps between store shape and dual-file layout
 - **Known gap**: `writeNewConfig()` in `jsonc-writer.ts` ignores the `isJsonc` parameter — always outputs plain JSON even for `.jsonc` files
 
-### Dual-File Config Layout
-The app manages TWO config files with different formats:
-- `opencode.json` — plain JSON, contains `providers` (with nested `models`)
-- `oh-my-openagent.jsonc` — JSONC (supports comments), contains `agents`, `categories`, `configProfiles`, `background_task`, `runtime_fallback`, `tmux`, `team_mode`
-
-The splitter/merger maps between the unified store shape and this dual-file layout. When adding new config fields, update BOTH the types AND the splitter/merger AND the store.
+### Preset Config System
+The app supports multiple preset configurations stored in `~/.config/omo-config-web/`:
+- Each preset is a subdirectory containing `opencode.json` + `oh-my-openagent.jsonc`
+- On `omo-config-web start [name]`, the selected preset is copied to `~/.config/opencode/`
+- Current preset tracked in `~/.config/omo-config-web/.current`
+- The app itself always reads/writes `~/.config/opencode/` — preset management is external to the app
 
 ### pnpm Workspace
 `pnpm-workspace.yaml` declares `onlyBuiltDependencies: [sharp, unrs-resolver]`. Do not remove — build will fail without it.
@@ -141,23 +141,16 @@ This project uses Tailwind CSS v4 with `@tailwindcss/postcss`. There is NO `tail
 - Form components use simple `useState` + `useEffect` sync (NOT react-hook-form for standalone forms; react-hook-form is only used in `AgentConfigForm`)
 - Store selectors: use individual `useConfigStore((s) => s.field)` — never destructure the whole store
 - Entity keys: `Record<string, T>` keyed by entity name (e.g. `agents["coder"]`)
-- No `error.tsx` files exist yet — any runtime error crashes the entire app with a white screen
-- No `loading.tsx` files exist yet — pages show blank content while data loads
+- Route-level `error.tsx` files exist for `/providers`, `/models`, `/agents`, `/profiles` — catch errors per route
+- Route-level `loading.tsx` files use Skeleton component — pages show loading skeletons while data loads
 - The `eslint.config.mjs` uses the flat config format with `eslint-config-next` presets
 
 ## Known Issues (from Adversarial Review)
 
 These are confirmed issues that should be fixed before adding new features:
 
-- **Dashboard Import/Export buttons are non-functional** — `src/app/page.tsx` lines 108-115 have no onClick handlers
-- **JSONC round-trip is lossy** — `importFromJson()` → `exportToJson()` silently strips `tmux`/`team_mode` fields; `writeNewConfig()` ignores `isJsonc` param
-- **Dual dirty-tracking desync** — `isDirty` (store) and `hasUnsavedChanges` (DualModeEditor local) are independent booleans
 - **Agent form covers only ~32% of fields** — 7 of 22 Agent type fields have UI; missing: skills, permissions, prompt, tools, disable, mode, color, etc.
 - **No concurrency control on publish** — last-write-wins, no ETag/version check
-- **No React error boundaries** — runtime errors cause white-screen crash
-- **No config validation before publish** — users can create invalid configs
-- **Delete uses `window.confirm()`** — inconsistent with shadcn Dialog used elsewhere
-- **No loading states** — blank screen while API data loads
 
 ## Language
 

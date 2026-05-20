@@ -7,6 +7,7 @@ import type { Model } from "@/types";
 import { ModelDetail } from "@/components/models/ModelDetail";
 import { ModelList } from "@/components/models/ModelList";
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ModelsPage() {
   const providers = useConfigStore((state) => state.providers);
@@ -26,6 +27,22 @@ export default function ModelsPage() {
     if (!selectedModel) return;
     updateModel(selectedModel.providerKey, selectedModel.modelKey, updates);
   };
+
+  if (Object.keys(providers).length === 0) {
+    return (
+      <div className="space-y-4 p-4">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-96 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DualModeEditor

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Braces, AlertCircle } from "lucide-react";
@@ -30,20 +30,22 @@ export function MonacoJsonEditor({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Debounced onChange that validates JSON before calling the callback
-  const debouncedOnChange = useRef(
-    debounce((val: string) => {
-      if (!onChange) return;
-      try {
-        JSON.parse(val);
-        setHasJsonError(false);
-        setErrorMessage(null);
-        onChange(val);
-      } catch (e) {
-        setHasJsonError(true);
-        setErrorMessage((e as Error).message);
-      }
-    }, 300)
-  ).current;
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((val: string) => {
+        if (!onChange) return;
+        try {
+          JSON.parse(val);
+          setHasJsonError(false);
+          setErrorMessage(null);
+          onChange(val);
+        } catch (e) {
+          setHasJsonError(true);
+          setErrorMessage((e as Error).message);
+        }
+      }, 300),
+    [onChange]
+  );
 
   // Cleanup debounce on unmount
   useEffect(() => {

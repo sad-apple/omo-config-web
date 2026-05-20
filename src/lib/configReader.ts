@@ -15,8 +15,9 @@ export async function readProviders(): Promise<Record<string, Provider>> {
     const data = await response.json();
     const merged = mergeConfig(data.opencode as OpencodeJsonFile, data.omo as OmoJsoncFile);
     return merged.providers ?? MOCK_PROVIDERS;
-  } catch {
+  } catch (error) {
     // Fall back to mock data if API call fails
+    console.error("[configReader] Failed to read providers from API, using mock data:", error);
     return MOCK_PROVIDERS;
   }
 }

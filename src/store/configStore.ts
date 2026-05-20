@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig, PublishSnapshot, TmuxConfig, TeamModeConfig } from '@/types';
+import type { Provider, Agent, Category, ConfigProfile, OmoConfig, Model, BackgroundTaskConfig, RuntimeFallbackConfig, PublishSnapshot, TmuxConfig, TeamModeConfig, Preset, PresetListResponse } from '@/types';
 
 interface ConfigState {
   // State
@@ -48,6 +48,18 @@ interface ConfigState {
   // Publish history actions
   addPublishSnapshot: (snapshot: PublishSnapshot) => void;
   clearPublishHistory: () => void;
+  // Preset state
+  presets: Preset[];
+  currentPreset: string | null;
+  isLoadingPresets: boolean;
+
+  // Preset actions
+  loadPresets: () => Promise<void>;
+  setCurrentPreset: (name: string | null) => void;
+  createPreset: (name: string, copyFrom?: string) => Promise<void>;
+  deletePreset: (name: string) => Promise<void>;
+  activatePreset: (name: string) => Promise<void>;
+
 }
 
 const initialState = {
@@ -65,6 +77,9 @@ const initialState = {
   isDirty: false,
   lastSavedSnapshot: '',
   publishHistory: [],
+  presets: [],
+  currentPreset: null,
+  isLoadingPresets: false,
 };
 
 function createSnapshot(state: ConfigState): string {
@@ -337,6 +352,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       });
     } catch {
       // If snapshot is invalid, just reset to empty state
+      console.error("[store] Failed to parse lastSavedSnapshot, resetting to empty state");
       set({
         agents: {},
         categories: {},
@@ -359,6 +375,86 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     })),
 
   clearPublishHistory: () => set({ publishHistory: [] }),
+
+  // Preset actions
+  loadPresets: async () => {
+    set({ isLoadingPresets: true });
+    try {
+      const res = await fetch('/api/config/presets');
+      if (!res.ok) throw new Error('Failed to load presets');
+      const data: PresetListResponse = await res.json();
+      set({ presets: data.presets, currentPreset: data.currentPreset, isLoadingPresets: false });
+    } catch (error) {
+      console.error("[store] Failed to load presets:", error);
+      set({ isLoadingPresets: false });
+    }
+  },
+
+  setCurrentPreset: (name) => set({ currentPreset: name }),
+
+  createPreset: async (name, copyFrom) => {
+    try {
+      const res = await fetch('/api/config/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, copyFrom }),
+      });
+      if (!res.ok) throw new Error('Failed to create preset');
+      await get().loadPresets();
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  deletePreset: async (name) => {
+    try {
+      const res = await fetch('/api/config/presets', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error('Failed to delete preset');
+      await get().loadPresets();
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  activatePreset: async (name) => {
+    const state = get();
+
+    // Check for unsaved changes
+    if (state.isDirty) {
+      throw new Error('UNSAVED_CHANGES');
+    }
+
+    try {
+      const res = await fetch('/api/config/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ presetName: name }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to activate preset' }));
+        throw new Error(errorData.error || 'Failed to activate preset');
+      }
+      await res.json();
+
+      // Reload config from the activated preset
+      const configRes = await fetch(`/api/config?preset=${encodeURIComponent(name)}`);
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        if (configData.config) {
+          get().importFromJson(JSON.stringify(configData.config));
+        }
+      }
+
+      set({ currentPreset: name });
+    } catch (error) {
+      throw error;
+    }
+  },
+
 }));
 
 // Convenience selectors
@@ -373,3 +469,8 @@ export const useRuntimeFallback = () => useConfigStore((state) => state.runtimeF
 export const usePublishHistory = () => useConfigStore((state) => state.publishHistory);
 export const useTmux = () => useConfigStore((state) => state.tmux);
 export const useTeamMode = () => useConfigStore((state) => state.teamMode);
+
+export const usePresets = () => useConfigStore((s) => s.presets);
+export const useCurrentPreset = () => useConfigStore((s) => s.currentPreset);
+export const useIsLoadingPresets = () => useConfigStore((s) => s.isLoadingPresets);
+

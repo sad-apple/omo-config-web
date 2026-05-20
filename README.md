@@ -40,13 +40,77 @@
 
 ### 安装
 
-```bash
-# 克隆仓库
-git clone https://github.com/sad-apple/omo-config-web.git
-cd omo-config-web
+从 GitHub Releases 下载预构建包并全局安装（无需构建环境）：
 
-# 安装依赖
-pnpm install
+```bash
+# 一键安装/更新到最新版本
+curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config-web/main/install.sh | bash -s update
+
+# 或下载后执行
+curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config-web/main/install.sh -o install.sh
+chmod +x install.sh
+bash install.sh update
+
+# 安装指定版本
+bash install.sh update v0.2.0
+```
+
+安装完成后，`omo-config-web` 命令全局可用。
+
+### 配置管理
+
+预设配置存放在 `~/.config/omo-config-web/` 目录下，每个配置一个子目录：
+
+```
+~/.config/omo-config-web/
+├── default/                    # 默认配置
+│   ├── opencode.json
+│   └── oh-my-openagent.jsonc
+├── daily/                      # 日常开发配置
+│   ├── opencode.json
+│   └── oh-my-openagent.jsonc
+└── .current                    # 记录当前使用的配置
+```
+
+```bash
+# 列出所有预设配置
+omo-config-web list
+
+# 创建新配置
+omo-config-web create daily
+
+# 切换到指定配置
+omo-config-web use daily
+
+# 查看当前配置
+omo-config-web current
+
+# 删除配置
+omo-config-web delete daily
+```
+
+### 服务管理
+
+```bash
+omo-config-web start              # 使用当前配置启动服务
+omo-config-web start daily        # 使用指定配置启动服务
+omo-config-web stop               # 停止服务
+omo-config-web restart            # 重启服务
+omo-config-web status             # 查看状态
+```
+
+启动时会自动将预设配置复制到 `~/.config/opencode/` 目录供应用读取。
+
+#### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| PORT | 3000 | 服务端口 |
+
+自定义端口示例：
+
+```bash
+PORT=8080 omo-config-web start
 ```
 
 ### 开发
@@ -103,14 +167,33 @@ src/
 
 ## 配置文件
 
-本工具管理两个配置文件：
+本工具采用**预设配置 + 启动时应用**的模式：
+
+### 预设配置目录
+
+所有预设配置存放在 `~/.config/omo-config-web/` 下，每个配置一个子目录：
+
+```
+~/.config/omo-config-web/
+├── default/
+│   ├── opencode.json          # 提供商和模型
+│   └── oh-my-openagent.jsonc  # 智能体、分类、配置方案
+├── daily/
+│   ├── opencode.json
+│   └── oh-my-openagent.jsonc
+└── .current                   # 当前使用的配置名称
+```
+
+### 运行时配置目录
+
+启动服务时，预设配置会自动复制到 `~/.config/opencode/`：
 
 | 文件 | 格式 | 内容 |
 |------|------|------|
 | `~/.config/opencode/opencode.json` | JSON | 提供商 (providers) 和模型 (models) |
 | `~/.config/opencode/oh-my-openagent.jsonc` | JSONC | 智能体、分类、配置方案、运行时配置 |
 
-配置文件位于 `~/.config/opencode/` 目录下。应用通过 API 路由读取和写入这些文件，写入时使用 `jsonc-parser` 保留 JSONC 文件中的注释和格式。
+应用通过 API 路由读取和写入运行时配置目录，写入时使用 `jsonc-parser` 保留注释和格式。
 
 ## 使用指南
 
@@ -188,8 +271,6 @@ const { agents, setAgents } = useConfigStore();
 
 - Agent 配置表单仅覆盖约 32% 的字段（skills、permissions、prompt 等尚未支持）
 - 发布时无并发控制，最后写入生效
-- 无 React 错误边界，运行时错误会导致白屏
-- 发布前无配置校验
 - `tmux` 和 `team_mode` 字段在导入/导出时会丢失
 
 ## 许可证

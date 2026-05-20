@@ -4,6 +4,7 @@ import { Sidebar, SidebarProvider } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { ConfigInitializer } from "@/components/ConfigInitializer";
 
 export const metadata: Metadata = {
   title: "OMO Config",
@@ -22,6 +23,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground transition-colors duration-300">
         <ThemeProvider>
+        <ConfigInitializer />
         <SidebarProvider>
           <div className="flex min-h-full flex-col lg:flex-row">
             <Sidebar />

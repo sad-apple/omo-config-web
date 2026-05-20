@@ -27,6 +27,7 @@ export function mergeJsonc(
       return JSON.stringify(merged, null, 2) + "\n";
     } catch {
       // If parsing fails, fall back to writing new data
+      console.error("[jsonc-writer] Failed to parse JSON for merge, writing new data");
       return JSON.stringify(newData, null, 2) + "\n";
     }
   }

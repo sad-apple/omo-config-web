@@ -275,7 +275,7 @@ export function ProfilesClient() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Profile</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete profile "{deleteTarget}"? This action cannot be undone.
+              Are you sure you want to delete profile &quot;{deleteTarget}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

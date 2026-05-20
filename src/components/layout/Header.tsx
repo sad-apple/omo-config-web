@@ -1,6 +1,7 @@
 "use client";
 
 import { ImportExportButtons } from "@/components/editor/ImportExportButtons";
+import { PresetSelector } from "@/components/editor/PresetSelector";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function Header() {
@@ -14,6 +15,8 @@ export function Header() {
           OMO Configuration Manager
         </h1>
       </div>
+
+      <PresetSelector />
 
       <ThemeToggle />
       <ImportExportButtons />

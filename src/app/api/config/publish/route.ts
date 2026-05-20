@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
-import path from "path";
-import { createHash } from "crypto";
-import { getOpencodeJsonPath, getOmoJsoncPath, getConfigDir } from "@/lib/config-paths";
+import { computeEtag } from "@/lib/etag";
+import { getOpencodeJsonPath, getOmoJsoncPath, getConfigDir, getPresetOpencodeJsonPath, getPresetOmoJsoncPath, getPresetDir } from "@/lib/config-paths";
 import { splitConfig } from "@/lib/config-splitter";
 import { mergeJsonc, writeNewConfig } from "@/lib/jsonc-writer";
+import { validateConfig } from "@/lib/config-validator";
 
 export const dynamic = "force-dynamic";
 
@@ -12,16 +12,14 @@ interface PublishRequestBody {
   config: Record<string, unknown>;
   etags?: { opencode: string | null; omo: string | null };
   force?: boolean;
+  presetName?: string;
 }
 
-function computeEtag(content: string): string {
-  return createHash("sha256").update(content).digest("hex").slice(0, 16);
-}
 
 export async function POST(request: Request) {
   try {
     const body: PublishRequestBody = await request.json();
-    const { config, etags, force } = body;
+    const { config, etags, force, presetName } = body;
 
     if (!config || typeof config !== "object") {
       return NextResponse.json(
@@ -30,8 +28,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const opencodePath = getOpencodeJsonPath();
-    const omoPath = getOmoJsoncPath();
+    // Validate config before publishing
+    const validation = validateConfig(config);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { success: false, error: "Validation failed", errors: validation.errors },
+        { status: 400 }
+      );
+    }
+
+    const opencodePath = presetName ? getPresetOpencodeJsonPath(presetName) : getOpencodeJsonPath();
+    const omoPath = presetName ? getPresetOmoJsoncPath(presetName) : getOmoJsoncPath();
 
     // ETag validation (skip if force=true)
     if (etags && !force) {
@@ -39,10 +46,16 @@ export async function POST(request: Request) {
       let currentOmoRaw = "";
       try {
         currentOpencodeRaw = await fs.readFile(opencodePath, "utf-8");
-      } catch { /* file doesn't exist */ }
+      } catch {
+        /* file doesn't exist */
+        console.error("[publish] Failed to read opencode.json for ETag check:");
+      }
       try {
         currentOmoRaw = await fs.readFile(omoPath, "utf-8");
-      } catch { /* file doesn't exist */ }
+      } catch {
+        /* file doesn't exist */
+        console.error("[publish] Failed to read oh-my-openagent.jsonc for ETag check:");
+      }
 
       const currentOpencodeEtag = currentOpencodeRaw ? computeEtag(currentOpencodeRaw) : null;
       const currentOmoEtag = currentOmoRaw ? computeEtag(currentOmoRaw) : null;
@@ -71,8 +84,12 @@ export async function POST(request: Request) {
     );
 
     // Ensure config directory exists
-    const configDir = getConfigDir();
-    await fs.mkdir(configDir, { recursive: true });
+    if (presetName) {
+      await fs.mkdir(getPresetDir(presetName), { recursive: true });
+    } else {
+      const configDir = getConfigDir();
+      await fs.mkdir(configDir, { recursive: true });
+    }
 
     const filesWritten: string[] = [];
 
@@ -82,6 +99,7 @@ export async function POST(request: Request) {
       opencodeRaw = await fs.readFile(opencodePath, "utf-8");
     } catch {
       // File doesn't exist yet
+      console.error("[publish] Failed to read opencode.json for merge check:");
     }
 
     if (opencodeRaw.trim()) {
@@ -101,6 +119,7 @@ export async function POST(request: Request) {
       omoRaw = await fs.readFile(omoPath, "utf-8");
     } catch {
       // File doesn't exist yet
+      console.error("[publish] Failed to read oh-my-openagent.jsonc for merge check:");
     }
 
     if (omoRaw.trim()) {

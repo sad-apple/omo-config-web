@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { Clock, Plus, X } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -121,31 +121,11 @@ export function BackgroundTaskConfigForm({
   value,
   onChange,
 }: BackgroundTaskConfigFormProps) {
-  const [enabled, setEnabled] = useState(value !== null);
-  const [defaultConcurrency, setDefaultConcurrency] = useState(
-    value?.defaultConcurrency ?? DEFAULT_CONCURRENCY
-  );
-  const [staleTimeoutMs, setStaleTimeoutMs] = useState(
-    value?.staleTimeoutMs ?? DEFAULT_STALE_TIMEOUT
-  );
-  const [providerConcurrency, setProviderConcurrency] = useState<KeyValueRow[]>(
-    toKeyValueRows(value?.providerConcurrency)
-  );
-  const [modelConcurrency, setModelConcurrency] = useState<KeyValueRow[]>(
-    toKeyValueRows(value?.modelConcurrency)
-  );
-
-  useEffect(() => {
-    if (value !== null) {
-      setEnabled(true);
-      setDefaultConcurrency(value.defaultConcurrency ?? DEFAULT_CONCURRENCY);
-      setStaleTimeoutMs(value.staleTimeoutMs ?? DEFAULT_STALE_TIMEOUT);
-      setProviderConcurrency(toKeyValueRows(value.providerConcurrency));
-      setModelConcurrency(toKeyValueRows(value.modelConcurrency));
-    } else {
-      setEnabled(false);
-    }
-  }, [value]);
+  const enabled = value !== null;
+  const defaultConcurrency = value?.defaultConcurrency ?? DEFAULT_CONCURRENCY;
+  const staleTimeoutMs = value?.staleTimeoutMs ?? DEFAULT_STALE_TIMEOUT;
+  const providerConcurrency = useMemo(() => toKeyValueRows(value?.providerConcurrency), [value?.providerConcurrency]);
+  const modelConcurrency = useMemo(() => toKeyValueRows(value?.modelConcurrency), [value?.modelConcurrency]);
 
   const emitChange = (
     overrides: Partial<BackgroundTaskConfig> = {}
@@ -165,7 +145,6 @@ export function BackgroundTaskConfigForm({
   };
 
   const handleEnabledChange = (checked: boolean) => {
-    setEnabled(checked);
     if (checked) {
       emitChange();
     } else {
@@ -175,7 +154,6 @@ export function BackgroundTaskConfigForm({
 
   const handleDefaultConcurrencyChange = (newValue: number) => {
     const clamped = Math.min(MAX_CONCURRENCY, Math.max(MIN_CONCURRENCY, newValue));
-    setDefaultConcurrency(clamped);
     if (enabled) {
       emitChange({ defaultConcurrency: clamped });
     }
@@ -183,21 +161,18 @@ export function BackgroundTaskConfigForm({
 
   const handleStaleTimeoutChange = (newValue: number) => {
     const clamped = Math.min(MAX_STALE_TIMEOUT, Math.max(MIN_STALE_TIMEOUT, newValue));
-    setStaleTimeoutMs(clamped);
     if (enabled) {
       emitChange({ staleTimeoutMs: clamped });
     }
   };
 
   const handleProviderConcurrencyChange = (rows: KeyValueRow[]) => {
-    setProviderConcurrency(rows);
     if (enabled) {
       emitChange({ providerConcurrency: fromKeyValueRows(rows) });
     }
   };
 
   const handleModelConcurrencyChange = (rows: KeyValueRow[]) => {
-    setModelConcurrency(rows);
     if (enabled) {
       emitChange({ modelConcurrency: fromKeyValueRows(rows) });
     }

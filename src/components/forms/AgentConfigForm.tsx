@@ -6,7 +6,6 @@ import { useForm, useController, Controller } from "react-hook-form";
 import { Save, X } from "lucide-react";
 
 import type { Agent, Category, Provider, PermissionLevel } from "@/types";
-import { cn } from "@/lib/utils";
 import { parseModelRef } from "@/lib/model-ref";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +17,6 @@ import { Slider } from "@/components/ui/slider";
 import { TabsContent } from "@/components/ui/tabs";
 import { ModelSelector } from "./ModelSelector";
 import { ThinkingConfigForm } from "./ThinkingConfigForm";
-import { VariantSelector } from "./VariantSelector";
 import { FallbackModelsEditor } from "./FallbackModelsEditor";
 import { agentSchema, type AgentFormValues } from "./agentSchema";
 
@@ -40,14 +38,16 @@ function ControlledModelSelector({
   label,
   placeholder,
 }: {
-  control: any;
+  control: ReturnType<typeof useForm<AgentFormValues>>["control"];
   name: "model" | "ultrawork" | "compaction";
   providers: Record<string, Provider>;
   label: string;
   placeholder?: string;
 }) {
   const { field, fieldState } = useController({ control, name });
-  const value = name === "model" ? (field.value as string) : (field.value as any)?.model || "";
+  const value = name === "model"
+    ? (field.value as string)
+    : ((field.value as { model?: string })?.model) || "";
 
   return (
     <div className="space-y-2">
@@ -58,7 +58,7 @@ function ControlledModelSelector({
           if (name === "model") {
             field.onChange(val);
           } else {
-            const current = (field.value as any) || {};
+            const current = (field.value as { model?: string }) ?? {};
             field.onChange({ ...current, model: val });
           }
         }}
@@ -78,7 +78,7 @@ function ControlledSelect({
   label,
   options,
 }: {
-  control: any;
+  control: ReturnType<typeof useForm<AgentFormValues>>["control"];
   name: keyof AgentFormValues;
   label: string;
   options: { value: string; label: string }[];
@@ -107,7 +107,7 @@ function ControlledSlider({
   max,
   step = 0.1,
 }: {
-  control: any;
+  control: ReturnType<typeof useForm<AgentFormValues>>["control"];
   name: keyof AgentFormValues;
   label: string;
   min: number;
@@ -115,13 +115,7 @@ function ControlledSlider({
   step?: number;
 }) {
   const { field } = useController({ control, name });
-  const [localValue, setLocalValue] = React.useState((field.value as number) ?? min);
-
-  React.useEffect(() => {
-    if (field.value !== localValue) {
-      setLocalValue((field.value as number) ?? min);
-    }
-  }, [field.value]);
+  const localValue = (field.value as number) ?? min;
 
   return (
     <div className="space-y-2">
@@ -134,14 +128,13 @@ function ControlledSlider({
         max={max}
         step={step}
         value={[localValue]}
-        onValueChange={(v) => setLocalValue(v[0])}
         onValueCommit={(v) => field.onChange(v[0])}
       />
     </div>
   );
 }
 
-function PermissionEditor({ control }: { control: any }) {
+function PermissionEditor({ control }: { control: ReturnType<typeof useForm<AgentFormValues>>["control"] }) {
   const { field } = useController({ control, name: "permission" });
   const permission = (field.value as Record<string, PermissionLevel>) || {};
   const permissionKeys = ["edit", "webfetch", "task", "doom_loop", "external_directory"] as const;
@@ -188,7 +181,7 @@ function KeyValueEditor({
   name,
   label,
 }: {
-  control: any;
+  control: ReturnType<typeof useForm<AgentFormValues>>["control"];
   name: "tools";
   label: string;
 }) {
@@ -198,19 +191,20 @@ function KeyValueEditor({
 
   const addEntry = () => {
     if (newKey.trim()) {
-      field.onChange({ ...(field.value || {}), [newKey.trim()]: true });
+      field.onChange({ ...(field.value as Record<string, boolean> || {}), [newKey.trim()]: true });
       setNewKey("");
     }
   };
 
   const removeEntry = (key: string) => {
-    const updated = { ...(field.value || {}) };
+    const updated = { ...(field.value as Record<string, boolean> || {}) };
     delete updated[key];
     field.onChange(updated);
   };
 
   const toggleEntry = (key: string) => {
-    field.onChange({ ...(field.value || {}), [key]: !(field.value as any)?.[key] });
+    const current = (field.value as Record<string, boolean>) || {};
+    field.onChange({ ...current, [key]: !current[key] });
   };
 
   return (
@@ -248,7 +242,7 @@ function TagEditor({
   name,
   label,
 }: {
-  control: any;
+  control: ReturnType<typeof useForm<AgentFormValues>>["control"];
   name: "skills";
   label: string;
 }) {

@@ -32,6 +32,7 @@ export function usePublishHistory() {
         }
       } catch {
         // Ignore parse errors
+        console.error("[publishHistory] Failed to parse stored history:");
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -43,19 +44,19 @@ export function usePublishHistory() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(publishHistory));
       } catch {
         // Ignore storage errors
+        console.error("[publishHistory] Failed to persist history to localStorage:");
       }
     }
   }, [publishHistory]);
-
   const clearHistory = useCallback(() => {
     clearPublishHistory();
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       // Ignore
+      console.error("[publishHistory] Failed to clear history from localStorage:");
     }
   }, [clearPublishHistory]);
-
   return {
     publishHistory,
     addPublishSnapshot,

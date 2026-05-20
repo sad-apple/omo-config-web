@@ -1,15 +1,17 @@
-import { createHash } from "crypto";
+import { computeEtag } from "@/lib/etag";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
-import path from "path";
 import * as jsonc from "jsonc-parser";
-import { getOpencodeJsonPath, getOmoJsoncPath } from "@/lib/config-paths";
+import { getOpencodeJsonPath, getOmoJsoncPath, getPresetOpencodeJsonPath, getPresetOmoJsoncPath } from "@/lib/config-paths";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const opencodePath = getOpencodeJsonPath();
-  const omoPath = getOmoJsoncPath();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const preset = searchParams.get("preset");
+
+  const opencodePath = preset ? getPresetOpencodeJsonPath(preset) : getOpencodeJsonPath();
+  const omoPath = preset ? getPresetOmoJsoncPath(preset) : getOmoJsoncPath();
 
   let opencodeRaw = "";
   let omoRaw = "";
@@ -21,6 +23,7 @@ export async function GET() {
     opencodeExists = true;
   } catch {
     // File doesn't exist — that's fine
+    console.error("[config] Failed to read opencode.json:");
   }
 
   try {
@@ -28,6 +31,7 @@ export async function GET() {
     omoExists = true;
   } catch {
     // File doesn't exist — that's fine
+    console.error("[config] Failed to read oh-my-openagent.jsonc:");
   }
 
   let opencode: Record<string, unknown> = {};
@@ -38,26 +42,18 @@ export async function GET() {
       opencode = JSON.parse(opencodeRaw);
     } catch {
       // If JSON is invalid, return empty
+      console.error("[config] Failed to parse opencode.json:");
       opencode = {};
     }
   }
-
-  if (omoExists && omoRaw.trim()) {
     try {
-      const errors: jsonc.ParseError[] = [];
-      const parsed = jsonc.parseTree(omoRaw, errors);
-      if (errors.length === 0 && parsed) {
-        omo = parsed as unknown as Record<string, unknown>;
-      }
+      omo = jsonc.parse(omoRaw) as Record<string, unknown>;
     } catch {
       // If JSONC is invalid, return empty
+      console.error("[config] Failed to parse oh-my-openagent.jsonc:");
       omo = {};
     }
-  }
 
-  function computeEtag(content: string): string {
-    return createHash("sha256").update(content).digest("hex").slice(0, 16);
-  }
 
   return NextResponse.json({
     opencode,

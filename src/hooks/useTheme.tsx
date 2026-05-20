@@ -46,34 +46,25 @@ function applyTheme(resolved: ResolvedTheme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
+  const resolvedTheme = resolveTheme(theme);
   const [mounted, setMounted] = useState(false);
 
-  // Initialize on mount
-  useEffect(() => {
-    const stored = getStoredTheme();
-    const resolved = resolveTheme(stored);
-    setThemeState(stored);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
+  // Apply theme on mount
+  if (typeof window !== "undefined" && !mounted) {
+    applyTheme(resolvedTheme);
     setMounted(true);
-  }, []);
+  }
+
 
   // Listen for system preference changes
+  const [, forceUpdate] = useState(0);
   useEffect(() => {
-    if (!mounted) return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      if (theme === "system") {
-        const resolved = getSystemTheme();
-        setResolvedTheme(resolved);
-        applyTheme(resolved);
-      }
-    };
+    const handler = () => forceUpdate((n) => n + 1);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
-  }, [theme, mounted]);
+  }, []);
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
@@ -82,9 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // localStorage may be unavailable
     }
-    const resolved = resolveTheme(newTheme);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
+    applyTheme(resolveTheme(newTheme));
   }, []);
 
   // Prevent flash of wrong theme

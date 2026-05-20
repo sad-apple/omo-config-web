@@ -5,6 +5,7 @@ import { useConfigStore } from "@/store/configStore";
 import { splitConfig } from "@/lib/config-splitter";
 import { toast } from "sonner";
 import type { PublishSnapshot } from "@/types";
+import type { ValidationError } from "@/lib/config-validator";
 
 interface ConflictData {
   serverEtags: { opencode: string | null; omo: string | null };
@@ -28,7 +29,7 @@ export function usePublish() {
     etagsRef.current = newEtags;
   }, []);
 
-  const publish = useCallback(async (force = false) => {
+  const publish = useCallback(async (force = false, presetName?: string) => {
     if (isPublishing) return;
 
     setIsPublishing(true);
@@ -42,7 +43,7 @@ export function usePublish() {
       const response = await fetch("/api/config/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config, etags: etagsRef.current, force }),
+        body: JSON.stringify({ config, etags: etagsRef.current, force, presetName }),
       });
 
       if (response.status === 409) {
@@ -54,6 +55,10 @@ export function usePublish() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        if (response.status === 400 && errorData.errors) {
+          const errorMessages = errorData.errors.map((e: ValidationError) => e.message).join("; ");
+          throw new Error(`Validation failed: ${errorMessages}`);
+        }
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
@@ -80,7 +85,7 @@ export function usePublish() {
       addPublishSnapshot(snapshot);
       setLastSavedSnapshot();
 
-      toast.success("Configuration published to disk", {
+      toast.success(presetName ? `Published to preset: ${presetName}` : "Configuration published to disk", {
         description: `Files written: ${result.filesWritten.join(", ")}`,
       });
     } catch (error) {

@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results
 
 # next.js
 /.next/
@@ -30,12 +31,25 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# OpenCode runtime (agent session state, continuations, drafts)
+.opencode/
+.sisyphus/
+.omo/run-continuation/
+.omo/drafts/
+.omo/runtime/
+.omo/teams/
+.omo/worktrees/
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Local env overrides (keep .env.example tracked)
+.env
+.env.local
+.env.*.local

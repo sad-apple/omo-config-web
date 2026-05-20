@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
 import { Eye, Code, Save, AlertCircle, FileDiff, Keyboard } from "lucide-react";
@@ -39,27 +39,27 @@ export function DualModeEditor({
   const [jsonString, setJsonString] = useState(() =>
     JSON.stringify(jsonValue, null, 2)
   );
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSyncedJson, setLastSyncedJson] = useState(() => JSON.stringify(jsonValue, null, 2));
+  const hasUnsavedChanges = jsonString !== lastSyncedJson;
   const [hasJsonError, setHasJsonError] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
 
-  // Ref to track the latest jsonString for the debounced sync
-  const jsonStringRef = useRef(jsonString);
-  jsonStringRef.current = jsonString;
 
   // Debounced sync from JSON editor to store (300ms)
-  const debouncedSyncToStore = useRef(
-    debounce((val: string) => {
-      try {
-        const parsed = JSON.parse(val);
-        onJsonChange?.(parsed);
-        setHasJsonError(false);
-      } catch {
-        setHasJsonError(true);
-        toast.error("Invalid JSON — changes not synced to store");
-      }
-    }, 300)
-  ).current;
+  const debouncedSyncToStore = useMemo(
+    () =>
+      debounce((val: string) => {
+        try {
+          const parsed = JSON.parse(val);
+          onJsonChange?.(parsed);
+          setHasJsonError(false);
+        } catch {
+          setHasJsonError(true);
+          toast.error("Invalid JSON — changes not synced to store");
+        }
+      }, 300),
+    [onJsonChange]
+  );
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -93,7 +93,7 @@ export function DualModeEditor({
   useEffect(() => {
     if (jsonValue !== prevJsonValueRef.current) {
       setJsonString(JSON.stringify(jsonValue, null, 2));
-      setHasUnsavedChanges(false);
+      setLastSyncedJson(JSON.stringify(jsonValue, null, 2));
       prevJsonValueRef.current = jsonValue;
     }
   }, [jsonValue]);
@@ -101,7 +101,7 @@ export function DualModeEditor({
   // Monaco → Store sync (debounced)
   const handleJsonChange = useCallback((value: string) => {
       setJsonString(value);
-      setHasUnsavedChanges(true);
+      // hasUnsavedChanges is derived from jsonString !== lastSyncedJson
       debouncedSyncToStore(value);
     },
     [debouncedSyncToStore]
@@ -113,7 +113,7 @@ export function DualModeEditor({
       try {
         const parsed = JSON.parse(value);
         onJsonChange?.(parsed);
-        setHasUnsavedChanges(false);
+        setLastSyncedJson(value);
         setHasJsonError(false);
         toast.success("Changes applied successfully");
       } catch (e) {
@@ -126,9 +126,9 @@ export function DualModeEditor({
 
   const handleSave = useCallback(() => {
     setLastSavedSnapshot();
-    setHasUnsavedChanges(false);
+    setLastSyncedJson(jsonString);
     toast.success("Configuration saved");
-  }, [setLastSavedSnapshot]);
+  }, [setLastSavedSnapshot, jsonString]);
 
   // Keyboard shortcuts
   const { showShortcutsDialog, setShowShortcutsDialog } = useKeyboardShortcuts({
@@ -168,12 +168,12 @@ export function DualModeEditor({
         // Switching to JSON: refresh Monaco content from store
         const currentJson = exportToJson();
         setJsonString(currentJson);
-        setHasUnsavedChanges(false);
+        setLastSyncedJson(currentJson);
       } else if (target === "visual") {
         // Switching to Visual: apply any pending Monaco changes first
         debouncedSyncToStore.cancel();
         try {
-          const parsed = JSON.parse(jsonStringRef.current);
+          const parsed = JSON.parse(jsonString);
           onJsonChange?.(parsed);
           setHasJsonError(false);
         } catch {

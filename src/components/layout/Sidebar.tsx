@@ -8,7 +8,6 @@ import {
   Cpu,
   Bot,
   Layers,
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -23,7 +22,6 @@ const navItems = [
   { href: "/models", label: "Models", icon: Cpu },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/profiles", label: "Profiles", icon: Layers },
-  { href: "/configs", label: "Configs", icon: Settings },
 ];
 
 interface SidebarContextType {

@@ -164,3 +164,34 @@ export interface PublishSnapshot {
   /** Which files were written */
   filesWritten: string[];
 }
+
+// === Preset Config ===
+
+export interface Preset {
+  name: string;
+  createdAt: number;
+  modifiedAt: number;
+  hasOpencodeConfig: boolean;
+  hasOmoConfig: boolean;
+}
+
+export interface PresetListResponse {
+  presets: Preset[];
+  currentPreset: string | null;
+}
+
+export interface CreatePresetRequest {
+  name: string;
+  copyFrom?: string;
+}
+
+export interface ActivatePresetRequest {
+  presetName: string;
+}
+
+export interface ActivatePresetResponse {
+  success: boolean;
+  presetName: string;
+  filesCopied: string[];
+  timestamp: number;
+}

@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { usePublish } from "@/hooks/usePublish";
-import { useIsDirty } from "@/store/configStore";
+import { useIsDirty, useCurrentPreset } from "@/store/configStore";
 import { DiffPreview } from "./DiffPreview";
+import { validateConfig } from "@/lib/config-validator";
+import { useConfigStore } from "@/store/configStore";
 
 interface PublishDialogProps {
   className?: string;
@@ -22,11 +24,25 @@ interface PublishDialogProps {
 
 export function PublishDialog({ className }: PublishDialogProps) {
   const [open, setOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ field: string; message: string }[]>([]);
   const isDirty = useIsDirty();
   const { publish, isPublishing } = usePublish();
+  const currentPreset = useCurrentPreset();
+  const configBase = currentPreset
+    ? `~/.config/omo-config-web/${currentPreset}`
+    : "~/.config/opencode";
+  const exportToJson = useConfigStore((s) => s.exportToJson);
 
   const handlePublish = async () => {
-    await publish();
+    const json = exportToJson();
+    const config = JSON.parse(json);
+    const validation = validateConfig(config);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      return;
+    }
+    setValidationErrors([]);
+    await publish(false, currentPreset || undefined);
     setOpen(false);
   };
 
@@ -74,10 +90,10 @@ export function PublishDialog({ className }: PublishDialogProps) {
             <p className="text-sm font-medium">Files to be written:</p>
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="font-mono text-xs">
-                ~/.config/opencode/opencode.json
+                {configBase}/opencode.json
               </Badge>
               <Badge variant="outline" className="font-mono text-xs">
-                ~/.config/opencode/oh-my-openagent.jsonc
+                {configBase}/oh-my-openagent.jsonc
               </Badge>
             </div>
           </div>
@@ -94,6 +110,20 @@ export function PublishDialog({ className }: PublishDialogProps) {
             />
           </div>
         </div>
+
+          {/* Validation errors */}
+          {validationErrors.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-destructive">Validation errors:</p>
+              <div className="rounded-md bg-destructive/10 p-3 space-y-1">
+                {validationErrors.map((err, i) => (
+                  <p key={i} className="text-xs text-destructive">
+                    <span className="font-mono">{err.field}</span>: {err.message}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
 
         <DialogFooter>
           <Button

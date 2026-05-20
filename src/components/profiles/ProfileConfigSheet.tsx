@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -35,16 +35,7 @@ export function ProfileConfigSheet({
 
   const isEditing = profileKey !== null;
 
-  useEffect(() => {
-    if (open && profileKey && configProfiles[profileKey]) {
-      const profile = configProfiles[profileKey];
-      setName(profile.name);
-      setEnabled(profile.enabled);
-    } else if (open && !profileKey) {
-      setName("");
-      setEnabled(true);
-    }
-  }, [open, profileKey, configProfiles]);
+
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -79,8 +70,20 @@ export function ProfileConfigSheet({
     onOpenChange(false);
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen && profileKey && configProfiles[profileKey]) {
+      const profile = configProfiles[profileKey];
+      setName(profile.name);
+      setEnabled(profile.enabled);
+    } else if (isOpen && !profileKey) {
+      setName("");
+      setEnabled(true);
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="sm:max-w-md">
         <SheetHeader className="px-1">
           <SheetTitle>
