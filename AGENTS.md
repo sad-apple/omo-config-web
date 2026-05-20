@@ -55,13 +55,14 @@ src/
 │   │                       # BackgroundTaskConfigForm, RuntimeFallbackConfigForm
 │   └── editor/             # DualModeEditor, MonacoJsonEditor, ImportExportButtons,
 │                           # PublishDialog, PublishHistory, PublishButton, DiffPreview,
-│                           # KeyboardShortcutsDialog
+│                           # KeyboardShortcutsDialog, ConflictDialog, CreatePresetDialog,
+│                           # PresetSelector
 ├── hooks/                  # useConfigExport, useConfigImport, useDraftRestore,
 │                           # useTheme, useKeyboardShortcuts, usePublish, usePublishHistory
 ├── lib/                    # configReader.ts (API + mock fallback), config-splitter.ts,
 │                           # config-merger.ts, jsonc-writer.ts, config-paths.ts,
-│                           # config-templates.ts, model-ref.ts, provider-colors.ts,
-│                           # debounce.ts, utils.ts (cn)
+│                           # config-templates.ts, config-validator.ts, etag.ts,
+│                           # model-ref.ts, provider-colors.ts, debounce.ts, utils.ts (cn)
 ├── store/                  # configStore.ts (Zustand — single store, all state)
 └── types/                  # index.ts (canonical types — single source of truth)
 ```
@@ -141,16 +142,19 @@ This project uses Tailwind CSS v4 with `@tailwindcss/postcss`. There is NO `tail
 - Form components use simple `useState` + `useEffect` sync (NOT react-hook-form for standalone forms; react-hook-form is only used in `AgentConfigForm`)
 - Store selectors: use individual `useConfigStore((s) => s.field)` — never destructure the whole store
 - Entity keys: `Record<string, T>` keyed by entity name (e.g. `agents["coder"]`)
-- Route-level `error.tsx` files exist for `/providers`, `/models`, `/agents`, `/profiles` — catch errors per route
+- Route-level `error.tsx` files exist for all routes + global — catch errors per route
 - Route-level `loading.tsx` files use Skeleton component — pages show loading skeletons while data loads
 - The `eslint.config.mjs` uses the flat config format with `eslint-config-next` presets
+- **Preset config system**: Multiple presets in `~/.config/omo-config-web/`, each with `opencode.json` + `oh-my-openagent.jsonc`
+- **Conflict detection**: Publish checks disk state via ETag, prevents overwriting concurrent changes
+- **Config validation**: `config-validator.ts` checks model refs, required fields before publish
 
 ## Known Issues (from Adversarial Review)
 
 These are confirmed issues that should be fixed before adding new features:
 
 - **Agent form covers only ~32% of fields** — 7 of 22 Agent type fields have UI; missing: skills, permissions, prompt, tools, disable, mode, color, etc.
-- **No concurrency control on publish** — last-write-wins, no ETag/version check
+- **`tmux` and `team_mode` fields lost on import→export round-trip** — exist in types but NOT in store
 
 ## Language
 

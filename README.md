@@ -9,12 +9,10 @@
 - **智能体配置** — 为不同角色（coder、reviewer 等）分配模型、设置权限和回退策略
 - **分类管理** — 按任务类型对智能体进行分类管理
 - **配置方案 (Profiles)** — 创建多套配置方案，按需启用不同智能体和分类
-- **双模式编辑** — 可视化表单与 Monaco JSON 编辑器双向同步
-- **发布管理** — 将配置写入本地磁盘，支持 JSONC 格式保留注释
-- **发布历史** — 记录每次发布的快照，支持差异对比和回滚
-- **主题切换** — 支持亮色/暗色主题
-- **导入导出** — 支持 JSON 格式的完整配置导入导出
-- **拖拽排序** — 在配置方案中拖拽调整智能体和分类的顺序
+- **预设配置管理** — 创建、切换、删除多套预设配置，按需启用不同智能体和模型组合
+- **冲突检测** — 发布时自动检测磁盘配置变更，避免覆盖他人修改
+- **配置验证** — 发布前校验配置完整性，拦截无效引用和缺失必填字段
+- **发布并发控制** — ETag 版本检查，防止最后写入覆盖问题
 
 ## 技术栈
 
@@ -140,16 +138,21 @@ pnpm lint
 
 ## 项目结构
 
-```
 src/
 ├── app/                        # Next.js App Router 页面
 │   ├── page.tsx                # 仪表盘（Dashboard）
 │   ├── layout.tsx              # 根布局：主题 + 侧边栏 + 头部
-│   ├── providers/page.tsx      # Provider 管理页面
-│   ├── models/page.tsx         # 模型管理页面
-│   ├── agents/page.tsx         # 智能体管理页面
-│   ├── profiles/page.tsx       # 配置方案管理页面
-│   └── api/config/             # API 路由：读取/写入配置文件
+│   ├── error.tsx               # 全局错误边界
+│   ├── loading.tsx             # 全局加载骨架屏
+│   ├── providers/              # Provider 管理页面（含 error.tsx + loading.tsx）
+│   ├── models/                 # 模型管理页面（含 error.tsx + loading.tsx）
+│   ├── agents/                 # 智能体管理页面（含 error.tsx + loading.tsx）
+│   ├── profiles/               # 配置方案管理页面（含 error.tsx + loading.tsx）
+│   └── api/config/             # API 路由
+│       ├── route.ts            # GET: 读取磁盘配置
+│       ├── publish/route.ts    # POST: 写入配置（JSONC + ETag 并发控制）
+│       ├── presets/route.ts    # GET/POST: 预设配置管理
+│       └── activate/route.ts   # POST: 激活预设配置
 ├── components/
 │   ├── ui/                     # shadcn/ui 基础组件
 │   ├── layout/                 # 布局组件（侧边栏、头部、主题）
@@ -158,12 +161,11 @@ src/
 │   ├── agents/                 # 智能体相关组件
 │   ├── profiles/               # 配置方案相关组件
 │   ├── forms/                  # 表单组件
-│   └── editor/                 # Monaco 编辑器、发布管理组件
+│   └── editor/                 # Monaco 编辑器、发布管理、预设选择器
 ├── hooks/                      # 自定义 Hooks
-├── lib/                        # 工具库（配置读写、合并、模板等）
+├── lib/                        # 工具库（配置读写、合并、验证、ETag 等）
 ├── store/                      # Zustand 状态管理
 └── types/                      # TypeScript 类型定义
-```
 
 ## 配置文件
 
@@ -267,12 +269,8 @@ const { agents, setAgents } = useConfigStore();
 
 本项目使用 Tailwind CSS v4，主题变量定义在 `src/app/globals.css` 的 `@theme` 块中，无需 `tailwind.config.ts`。
 
-## 已知问题
-
 - Agent 配置表单仅覆盖约 32% 的字段（skills、permissions、prompt 等尚未支持）
-- 发布时无并发控制，最后写入生效
 - `tmux` 和 `team_mode` 字段在导入/导出时会丢失
-
 ## 许可证
 
 MIT
