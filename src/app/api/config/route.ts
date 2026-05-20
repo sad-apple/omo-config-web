@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
@@ -54,6 +55,10 @@ export async function GET() {
     }
   }
 
+  function computeEtag(content: string): string {
+    return createHash("sha256").update(content).digest("hex").slice(0, 16);
+  }
+
   return NextResponse.json({
     opencode,
     omo,
@@ -61,5 +66,9 @@ export async function GET() {
     omoExists,
     opencodeRaw,
     omoRaw,
+    etags: {
+      opencode: opencodeExists ? computeEtag(opencodeRaw) : null,
+      omo: omoExists ? computeEtag(omoRaw) : null,
+    },
   });
 }
