@@ -17,6 +17,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Play, Bot, Layers, ChevronLeft, Sparkles } from "lucide-react";
 
 export function ProfilesClient() {
@@ -24,6 +34,7 @@ export function ProfilesClient() {
   const [editingProfileKey, setEditingProfileKey] = React.useState<string | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false);
   const [selectedProfileKey, setSelectedProfileKey] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null);
 
   const configProfiles = useConfigStore((state) => state.configProfiles);
   const activeProfileId = useConfigStore((state) => state.activeProfileId);
@@ -47,13 +58,18 @@ export function ProfilesClient() {
   };
 
   const handleDelete = (key: string) => {
-    if (window.confirm(`Delete profile "${key}"? This cannot be undone.`)) {
-      deleteProfile(key);
+    setDeleteTarget(key);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      deleteProfile(deleteTarget);
       setLastSavedSnapshot();
-      if (selectedProfileKey === key) {
+      if (selectedProfileKey === deleteTarget) {
         setSelectedProfileKey(null);
       }
-      toast.success(`Profile "${key}" deleted`);
+      toast.success(`Profile "${deleteTarget}" deleted`);
+      setDeleteTarget(null);
     }
   };
 
@@ -254,6 +270,22 @@ export function ProfilesClient() {
           />
         </DialogContent>
       </Dialog>
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Profile</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete profile "{deleteTarget}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -126,6 +126,7 @@ export function DualModeEditor({
 
   const handleSave = useCallback(() => {
     setLastSavedSnapshot();
+    setHasUnsavedChanges(false);
     toast.success("Configuration saved");
   }, [setLastSavedSnapshot]);
 
