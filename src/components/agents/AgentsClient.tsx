@@ -11,6 +11,7 @@ export function AgentsClient() {
   const [selectedAgentKey, setSelectedAgentKey] = React.useState<string | null>(null);
   const agents = useConfigStore((state) => state.agents);
   const providers = useConfigStore((state) => state.providers);
+  const categories = useConfigStore((state) => state.categories);
   const updateAgent = useConfigStore((state) => state.updateAgent);
   const setLastSavedSnapshot = useConfigStore((state) => state.setLastSavedSnapshot);
   const exportToJson = useConfigStore((state) => state.exportToJson);
@@ -58,6 +59,7 @@ export function AgentsClient() {
           agent={selectedAgent}
           agentKey={selectedAgentKey!}
           providers={providers}
+          categories={categories}
           onSave={handleSave}
         />
       )}

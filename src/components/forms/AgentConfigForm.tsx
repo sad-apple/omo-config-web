@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Save, X, ChevronDown, ChevronUp } from "lucide-react";
 
-import type { Agent, Provider } from "@/types";
+import type { Agent, Category, Provider } from "@/types";
 import { cn } from "@/lib/utils";
 import { parseModelRef } from "@/lib/model-ref";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ interface AgentConfigFormProps {
   agent: Agent;
   agentKey: string;
   providers: Record<string, Provider>;
+  categories: Record<string, Category>;
   onSave: (agentKey: string, agent: Agent) => void;
   onCancel: () => void;
 }
@@ -33,6 +34,7 @@ export function AgentConfigForm({
   agent,
   agentKey,
   providers,
+  categories,
   onSave,
   onCancel,
 }: AgentConfigFormProps) {
