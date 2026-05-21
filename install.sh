@@ -20,7 +20,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 section() { echo -e "${BLUE}==>${NC} $1"; }
 
 # 配置
-REPO="${REPO:-sad-apple/omo-config}"
+REPO="${REPO:-sad-apple/omo-config-web}"
 INSTALL_DIR="$HOME/.local/share/omo-config"
 BIN_DIR="$HOME/.local/bin"
 CONFIG_BASE="$HOME/.config/omo-config"

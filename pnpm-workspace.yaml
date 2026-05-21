@@ -1,2 +1,7 @@
 packages:
   - "."
+
+settings:
+  onlyBuiltDependencies:
+    - "sharp"
+    - "unrs-resolver"
