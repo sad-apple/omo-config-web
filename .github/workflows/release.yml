@@ -47,8 +47,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        env:
-          PNPM_ALLOW_BUILD: sharp,unrs-resolver
       - name: Build
         run: pnpm build
         env:
