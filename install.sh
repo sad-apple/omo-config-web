@@ -84,15 +84,6 @@ install_from_release() {
     tar -xzf "/tmp/$filename" -C "$INSTALL_DIR" --strip-components=1
     rm -f "/tmp/$filename"
 
-    # 安装运行时依赖
-    cd "$INSTALL_DIR"
-    info "安装运行时依赖..."
-    if command -v npm &>/dev/null; then
-        npm install --omit=dev --no-audit --no-fund
-    else
-        error "未找到 npm，请先安装 Node.js"
-        exit 1
-    fi
 
     # 初始化配置目录
     section "初始化配置目录..."
@@ -414,7 +405,6 @@ cmd_update() {
     rm -f "/tmp/\$FILENAME"
 
     cd "\$INSTALL_DIR"
-    npm install --omit=dev --no-audit --no-fund
 
     info "更新完成！"
     info "重启服务: omo-config restart"

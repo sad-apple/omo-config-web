@@ -19,11 +19,10 @@ echo "包名称: $PACKAGE_NAME"
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-# 复制构建产物
-echo "复制构建产物..."
-cp -r "$BUILD_DIR"/* "$OUTPUT_DIR/"
+# 复制 standalone 构建产物（含 server.js、.next/、node_modules/）
+cp -a "$BUILD_DIR"/. "$OUTPUT_DIR/"
 
-# 复制静态资源 (standalone 模式需要)
+# 合并客户端静态资源（standalone 的 .next/ 不包含 .next/static/）
 if [[ -d "$SCRIPT_DIR/.next/static" ]]; then
     mkdir -p "$OUTPUT_DIR/.next/static"
     cp -r "$SCRIPT_DIR/.next/static"/* "$OUTPUT_DIR/.next/static/"
@@ -34,8 +33,6 @@ if [[ -d "$SCRIPT_DIR/public" ]]; then
     cp -r "$SCRIPT_DIR/public" "$OUTPUT_DIR/"
 fi
 
-# 复制 package.json (用于安装依赖)
-cp "$SCRIPT_DIR/package.json" "$OUTPUT_DIR/"
 
 # 复制安装脚本
 cp "$SCRIPT_DIR/install.sh" "$OUTPUT_DIR/"
@@ -98,16 +95,12 @@ esac
 EOF
 chmod +x "$OUTPUT_DIR/start.sh"
 
-# 创建 README
-cat > "$OUTPUT_DIR/README.md" << EOF
+cat > "$OUTPUT_DIR/README.md" << READMEEOF
 # OMO Config Web $RELEASE_TAG
 
 ## 快速启动
 
 \`\`\`bash
-# 安装运行时依赖
-npm install --omit=dev
-
 # 启动服务
 ./start.sh start
 
@@ -129,7 +122,7 @@ npm install --omit=dev
 |------|--------|------|
 | PORT | 3000 | 服务端口 |
 | OMO_CONFIG_DIR | ~/.config/opencode | 配置文件目录 |
-EOF
+READMEEOF
 
 # 打包
 echo "压缩打包..."
@@ -138,3 +131,4 @@ tar -czf "$SCRIPT_DIR/${PACKAGE_NAME}.tar.gz" "$PACKAGE_NAME"
 
 echo "完成: $SCRIPT_DIR/${PACKAGE_NAME}.tar.gz"
 echo "大小: $(du -h "$SCRIPT_DIR/${PACKAGE_NAME}.tar.gz" | cut -f1)"
+echo "提示: 已包含全部运行时依赖，无需 npm install"
