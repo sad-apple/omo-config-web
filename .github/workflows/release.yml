@@ -46,11 +46,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
-        run: |
-          # Install without build scripts, then manually approve builds
-          pnpm install --frozen-lockfile --ignore-scripts
-          # Rebuild native dependencies
-          pnpm rebuild sharp unrs-resolver
+        run: pnpm install --frozen-lockfile
+        env:
+          PNPM_ALLOW_BUILD: sharp,unrs-resolver
       - name: Build
         run: pnpm build
         env:
