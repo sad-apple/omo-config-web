@@ -79,11 +79,12 @@ jobs:
             curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.bump.outputs.tag || github.ref_name }}/omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
 
             # 解压
-tar -xzf omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
-cd omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64
+            tar -xzf omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
+            cd omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64
 
-# 启动
-./start.sh start
+            # 安装运行时依赖
+            npm install --omit=dev
+
             # 启动
             ./start.sh start
             ```
