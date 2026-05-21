@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version ${{ github.event.inputs.bump }}
+          pnpm version ${{ github.event.inputs.bump }}
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,18 +44,6 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
-          run_install: false
-
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -77,19 +65,19 @@ jobs:
           body: |
             ## OMO Config Web ${{ github.ref_name }}
 
-            ### 快速部署
+            ### 一键安装
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install.sh | bash -s update
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash -s update
             ```
 
             ### 手动部署
             ```bash
             # 下载预构建包
-            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/omo-config-web-${{ github.ref_name }}-linux-x64.tar.gz
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/omo-config-${{ github.ref_name }}-linux-x64.tar.gz
 
             # 解压
-            tar -xzf omo-config-web-${{ github.ref_name }}-linux-x64.tar.gz
-            cd omo-config-web-${{ github.ref_name }}-linux-x64
+            tar -xzf omo-config-${{ github.ref_name }}-linux-x64.tar.gz
+            cd omo-config-${{ github.ref_name }}-linux-x64
 
             # 安装运行时依赖
             npm install --omit=dev
@@ -97,6 +85,15 @@ jobs:
             # 启动
             ./start.sh start
             ```
+
+            ### 源码安装
+            ```bash
+            git clone https://github.com/${{ github.repository }}.git
+            cd omo-config
+            bash scripts/setup-dev.sh
+            omo-config start
+            ```
           files: |
+            omo-config-${{ github.ref_name }}-linux-x64.tar.gz
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
