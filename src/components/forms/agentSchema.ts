@@ -1,5 +1,4 @@
 import * as z from "zod";
-import type { PermissionLevel } from "@/types";
 
 export const permissionSchema = z.object({
   edit: z.enum(["ask", "allow", "deny"]).optional(),

@@ -41,8 +41,8 @@ export function DualModeEditor({
   );
   const [lastSyncedJson, setLastSyncedJson] = useState(() => JSON.stringify(jsonValue, null, 2));
   const hasUnsavedChanges = jsonString !== lastSyncedJson;
-  const [hasJsonError, setHasJsonError] = useState(false);
-  const [diffOpen, setDiffOpen] = useState(false);
+  const [, setHasJsonError] = useState(false);
+  const [, setDiffOpen] = useState(false);
 
 
   // Debounced sync from JSON editor to store (300ms)
@@ -185,7 +185,7 @@ export function DualModeEditor({
 
       setMode(target);
     },
-    [exportToJson, onJsonChange, debouncedSyncToStore]
+    [exportToJson, onJsonChange, debouncedSyncToStore, jsonString]
   );
 
   // Listen for toggle-editor-mode custom event (from keyboard shortcuts)

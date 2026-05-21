@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";

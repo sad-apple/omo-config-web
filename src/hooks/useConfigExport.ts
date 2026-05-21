@@ -1,5 +1,4 @@
 import { useConfigStore } from '@/store/configStore';
-import type { OmoConfig } from '@/types';
 
 /**
  * Hook for exporting the current configuration as a JSON file.

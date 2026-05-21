@@ -3,9 +3,7 @@
 import * as React from "react";
 import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
 import type { Provider } from "@/types";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { ModelSelector } from "./ModelSelector";
 
 interface FallbackModelsEditorProps {

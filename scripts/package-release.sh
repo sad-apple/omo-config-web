@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 RELEASE_TAG="${RELEASE_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0')}"
-PACKAGE_NAME="omo-config-web-${RELEASE_TAG}-linux-x64"
+PACKAGE_NAME="omo-config-${RELEASE_TAG}-linux-x64"
 BUILD_DIR="$SCRIPT_DIR/.next/standalone"
 OUTPUT_DIR="/tmp/$PACKAGE_NAME"
 

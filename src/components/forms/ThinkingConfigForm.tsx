@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Brain } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";

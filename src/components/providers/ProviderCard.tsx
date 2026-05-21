@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Package } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, Pencil } from "lucide-react";
 
 import {
   Card,
   CardContent,
-  CardDescription,
+  // CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,10 +20,12 @@ import {
 import type { Provider } from "@/types";
 
 interface ProviderCardProps {
+  providerKey: string;
   provider: Provider;
+  onEdit?: (providerKey: string) => void;
 }
 
-export function ProviderCard({ provider }: ProviderCardProps) {
+export function ProviderCard({ providerKey, provider, onEdit }: ProviderCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -37,9 +39,24 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               {provider.npm}
             </Badge>
           </div>
-          <Badge variant="outline" className="shrink-0">
-            {Object.keys(provider.models).length} model{Object.keys(provider.models).length !== 1 ? "s" : ""}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="shrink-0">
+              {Object.keys(provider.models).length} model{Object.keys(provider.models).length !== 1 ? "s" : ""}
+            </Badge>
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(providerKey);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

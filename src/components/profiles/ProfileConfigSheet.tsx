@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useConfigStore } from "@/store/configStore";
 import type { ConfigProfile } from "@/types";
+import { toast } from "sonner";
 
 interface ProfileConfigSheetProps {
   open: boolean;
@@ -61,7 +62,12 @@ export function ProfileConfigSheet({
         agents: [],
         categories: [],
       };
-      createProfile(newProfile);
+      try {
+        createProfile(newProfile);
+      } catch (error) {
+        toast.warning(error instanceof Error ? error.message : "Profile creation failed");
+        return;
+      }
     }
     onOpenChange(false);
   };

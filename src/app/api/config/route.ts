@@ -2,7 +2,7 @@ import { computeEtag } from "@/lib/etag";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import * as jsonc from "jsonc-parser";
-import { getOpencodeJsonPath, getOmoJsoncPath, getPresetOpencodeJsonPath, getPresetOmoJsoncPath } from "@/lib/config-paths";
+import { getPresetOpencodeJsonPath, getPresetOmoJsoncPath } from "@/lib/config-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const preset = searchParams.get("preset");
 
-  const opencodePath = preset ? getPresetOpencodeJsonPath(preset) : getOpencodeJsonPath();
-  const omoPath = preset ? getPresetOmoJsoncPath(preset) : getOmoJsoncPath();
+  if (!preset) {
+    return NextResponse.json({ error: "Missing required query parameter: preset" }, { status: 400 });
+  }
+
+  const opencodePath = getPresetOpencodeJsonPath(preset);
+  const omoPath = getPresetOmoJsoncPath(preset);
 
   let opencodeRaw = "";
   let omoRaw = "";
@@ -46,6 +50,7 @@ export async function GET(request: Request) {
       opencode = {};
     }
   }
+  if (omoExists && omoRaw.trim()) {
     try {
       omo = jsonc.parse(omoRaw) as Record<string, unknown>;
     } catch {
@@ -53,6 +58,7 @@ export async function GET(request: Request) {
       console.error("[config] Failed to parse oh-my-openagent.jsonc:");
       omo = {};
     }
+  }
 
 
   return NextResponse.json({

@@ -20,13 +20,14 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; }
 section() { echo -e "${BLUE}==>${NC} $1"; }
 
 # 配置
-REPO="${REPO:-sad-apple/omo-config-web}"
-INSTALL_DIR="$HOME/.omo-config-web"
+REPO="${REPO:-sad-apple/omo-config}"
+INSTALL_DIR="$HOME/.local/share/omo-config"
 BIN_DIR="$HOME/.local/bin"
-CONFIG_BASE="$HOME/.config/omo-config-web"
+CONFIG_BASE="$HOME/.config/omo-config"
 OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
-PID_FILE="/tmp/omo-config-web.pid"
-LOG_FILE="/tmp/omo-config-web.log"
+BACKUP_DIR="$CONFIG_BASE/.backup"
+PID_FILE="/tmp/omo-config.pid"
+LOG_FILE="/tmp/omo-config.log"
 PORT="${PORT:-3000}"
 CURRENT_FILE="$CONFIG_BASE/.current"
 
@@ -42,7 +43,7 @@ install_from_release() {
         download_url=$(curl -fsSL --max-time 60 "https://api.github.com/repos/$REPO/releases/latest" | \
             grep "browser_download_url.*linux-x64.tar.gz" | cut -d'"' -f4)
     else
-        download_url="https://github.com/$REPO/releases/download/$version/omo-config-web-${version}-linux-x64.tar.gz"
+        download_url="https://github.com/$REPO/releases/download/$version/omo-config-${version}-linux-x64.tar.gz"
     fi
 
     if [[ -z "$download_url" ]]; then
@@ -96,7 +97,7 @@ install_from_release() {
     # 初始化配置目录
     section "初始化配置目录..."
     mkdir -p "$CONFIG_BASE"
-
+    mkdir -p "$CONFIG_BASE"
     # 创建默认预设（如果不存在）
     if [[ ! -d "$CONFIG_BASE/default" ]]; then
         info "创建默认预设配置..."
@@ -111,17 +112,18 @@ install_from_release() {
     fi
 
     # 创建全局命令
-    section "创建全局命令: omo-config-web"
+    section "创建全局命令: omo-config"
     mkdir -p "$BIN_DIR"
-    cat > "$BIN_DIR/omo-config-web" << BINSCRIPT
+    cat > "$BIN_DIR/omo-config" << BINSCRIPT
 #!/bin/bash
 set -e
 
 INSTALL_DIR="$INSTALL_DIR"
-CONFIG_BASE="$CONFIG_BASE"
+CONFIG_BASE="$HOME/.config/omo-config"
 OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
-PID_FILE="/tmp/omo-config-web.pid"
-LOG_FILE="/tmp/omo-config-web.log"
+BACKUP_DIR="$CONFIG_BASE/.backup"
+PID_FILE="/tmp/omo-config.pid"
+LOG_FILE="/tmp/omo-config.log"
 CURRENT_FILE="$CONFIG_BASE/.current"
 PORT="\${PORT:-3000}"
 
@@ -178,26 +180,30 @@ cmd_list() {
 
 # 切换到指定配置
 cmd_use() {
-    local name="\$1"
-    if [[ -z "\$name" ]]; then
-        error "请指定配置名称: omo-config-web use <name>"
+    local name="$1"
+    if [[ -z "$name" ]]; then
+        error "请指定配置名称: omo-config use <name>"
         exit 1
     fi
 
-    if [[ ! -d "\$CONFIG_BASE/\$name" ]]; then
-        error "配置 '\$name' 不存在"
+    if [[ ! -d "$CONFIG_BASE/$name" ]]; then
+        error "配置 '$name' 不存在"
         exit 1
     fi
 
-    set_current_config "\$name"
-    info "已切换到配置: \$name"
+    # 先应用配置（含变更检测和自动备份）
+    apply_config "$name"
+
+    # 再标记为当前配置
+    set_current_config "$name"
+    info "已切换到配置: $name"
 }
 
 # 创建新配置
 cmd_create() {
     local name="\$1"
     if [[ -z "\$name" ]]; then
-        error "请指定配置名称: omo-config-web create <name>"
+        error "请指定配置名称: omo-config create <name>"
         exit 1
     fi
 
@@ -211,14 +217,14 @@ cmd_create() {
     printf '{\n  // OMO Config Web 配置\n  "agents": {},\n  "categories": {},\n  "configProfiles": {}\n}\n' > "\$CONFIG_BASE/\$name/oh-my-openagent.jsonc"
 
     info "已创建配置: \$name"
-    info "使用 omo-config-web use \$name 切换到该配置"
+    info "使用 omo-config use \$name 切换到该配置"
 }
 
 # 删除配置
 cmd_delete() {
     local name="\$1"
     if [[ -z "\$name" ]]; then
-        error "请指定配置名称: omo-config-web delete <name>"
+        error "请指定配置名称: omo-config delete <name>"
         exit 1
     fi
 
@@ -238,70 +244,97 @@ cmd_delete() {
     info "已删除配置: \$name"
 }
 
-# 复制配置到 opencode 目录
+# 安全应用配置：校验变更、用户确认、自动备份、原子复制
 apply_config() {
-    local name="\$1"
-    local config_dir="\$CONFIG_BASE/\$name"
+    local name="$1"
+    local config_dir="$CONFIG_BASE/$name"
 
-    if [[ ! -d "\$config_dir" ]]; then
-        error "配置 '\$name' 不存在"
+    if [[ ! -d "$config_dir" ]]; then
+        error "配置 '$name' 不存在"
         exit 1
     fi
 
     # 确保目标目录存在
-    mkdir -p "\$OPENCODE_CONFIG_DIR"
+    mkdir -p "$OPENCODE_CONFIG_DIR"
 
-    # 复制配置文件
-    cp "\$config_dir/opencode.json" "\$OPENCODE_CONFIG_DIR/opencode.json"
-    cp "\$config_dir/oh-my-openagent.jsonc" "\$OPENCODE_CONFIG_DIR/oh-my-openagent.jsonc"
+    # 检查运行时配置是否被修改过
+    local changed_files=()
+    for file in opencode.json oh-my-openagent.jsonc; do
+        local runtime_file="$OPENCODE_CONFIG_DIR/$file"
+        local preset_file="$config_dir/$file"
 
-    info "已应用配置 '\$name' 到 \$OPENCODE_CONFIG_DIR"
-}
-
-# 启动服务
-cmd_start() {
-    local config_name="\$1"
-
-    # 如果指定了配置，先应用
-    if [[ -n "\$config_name" ]]; then
-        if [[ ! -d "\$CONFIG_BASE/\$config_name" ]]; then
-            error "配置 '\$config_name' 不存在"
-            exit 1
+        if [[ -f "$runtime_file" ]]; then
+            if ! cmp -s "$runtime_file" "$preset_file" 2>/dev/null; then
+                changed_files+=("$file")
+            fi
         fi
-        apply_config "\$config_name"
-        set_current_config "\$config_name"
-    else
-        # 使用当前配置
-        config_name=\$(get_current_config)
-        apply_config "\$config_name"
+    done
+
+    # 如果有变更，提示用户确认
+    if [[ ${#changed_files[@]} -gt 0 ]]; then
+        warn "检测到以下运行时配置已被修改："
+        for f in "${changed_files[@]}"; do
+            echo "  - $f"
+        done
+        echo ""
+        echo "切换到预设 '$name' 将覆盖这些文件。"
+        echo "旧文件将自动备份到 $BACKUP_DIR/"
+        echo ""
+        read -p "是否继续？(y/N) " confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            info "已取消切换"
+            return 1
+        fi
+
+        # 用户确认后，执行备份
+        local backup_timestamp
+        backup_timestamp=$(date +%Y%m%d_%H%M%S)
+        local backup_path="$BACKUP_DIR/$backup_timestamp"
+        mkdir -p "$backup_path"
+
+        for file in "${changed_files[@]}"; do
+            local runtime_file="$OPENCODE_CONFIG_DIR/$file"
+            if [[ -f "$runtime_file" ]]; then
+                cp "$runtime_file" "$backup_path/$file"
+            fi
+        done
+
+        info "已备份运行时配置到: $backup_path"
     fi
 
+    # 复制预设配置到运行时目录
+    cp "$config_dir/opencode.json" "$OPENCODE_CONFIG_DIR/opencode.json"
+    cp "$config_dir/oh-my-openagent.jsonc" "$OPENCODE_CONFIG_DIR/oh-my-openagent.jsonc"
+
+    info "已应用配置 '$name' 到 $OPENCODE_CONFIG_DIR"
+}
+
+# 启动服务（不自动复制配置）
+cmd_start() {
     # 检查是否已在运行
-    if [[ -f "\$PID_FILE" ]] && kill -0 "\$(cat "\$PID_FILE")" 2>/dev/null; then
-        info "服务已在运行 (PID: \$(cat "\$PID_FILE"))"
-        info "当前配置: \$config_name"
-        info "访问地址: http://localhost:\$PORT"
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        info "服务已在运行 (PID: $(cat "$PID_FILE"))"
+        info "访问地址: http://localhost:$PORT"
         exit 0
     fi
 
-    section "启动 OMO Config Web (端口: \$PORT)..."
-    section "使用配置: \$config_name"
+    section "启动 OMO Config Web (端口: $PORT)..."
 
-    cd "\$INSTALL_DIR"
-    nohup node server.js --port "\$PORT" > "\$LOG_FILE" 2>&1 &
-    echo \$! > "\$PID_FILE"
+    cd "$INSTALL_DIR"
+    nohup node server.js --port "$PORT" > "$LOG_FILE" 2>&1 &
+    echo $! > "$PID_FILE"
 
     # 等待就绪
-    for i in \$(seq 1 15); do
-        if curl -s -o /dev/null -w "%{http_code}" "http://localhost:\$PORT/" 2>/dev/null | grep -q "200\|301\|302"; then
-            info "服务已就绪: http://localhost:\$PORT"
-            info "PID: \$(cat "\$PID_FILE")"
-            info "日志: tail -f \$LOG_FILE"
+    for i in $(seq 1 15); do
+        if curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/" 2>/dev/null | grep -q "200\|301\|302"; then
+            info "服务已就绪: http://localhost:$PORT"
+            info "PID: $(cat "$PID_FILE")"
+            info "日志: tail -f $LOG_FILE"
             exit 0
         fi
         sleep 2
     done
-    warn "服务启动中，请查看日志: tail -f \$LOG_FILE"
+    warn "服务启动中，请查看日志: tail -f $LOG_FILE"
 }
 
 # 停止服务
@@ -341,7 +374,7 @@ cmd_update() {
         DOWNLOAD_URL=$(curl -fsSL --max-time 60 "https://api.github.com/repos/$REPO/releases/latest" | \
             grep "browser_download_url.*linux-x64.tar.gz" | cut -d'"' -f4)
     else
-        DOWNLOAD_URL="https://github.com/$REPO/releases/download/\$version/omo-config-web-\$version-linux-x64.tar.gz"
+        DOWNLOAD_URL="https://github.com/$REPO/releases/download/\$version/omo-config-\$version-linux-x64.tar.gz"
     fi
 
     if [[ -z "\$DOWNLOAD_URL" ]]; then
@@ -384,7 +417,7 @@ cmd_update() {
     npm install --omit=dev --no-audit --no-fund
 
     info "更新完成！"
-    info "重启服务: omo-config-web restart"
+    info "重启服务: omo-config restart"
 }
 
 # 卸载
@@ -395,7 +428,7 @@ cmd_uninstall() {
     fi
 
     rm -rf "\$INSTALL_DIR"
-    rm -f "\$BIN_DIR/omo-config-web"
+    rm -f "\$BIN_DIR/omo-config"
 
     info "卸载完成"
     info "配置数据保留在 \$CONFIG_BASE，如需删除请手动执行: rm -rf \$CONFIG_BASE"
@@ -404,7 +437,7 @@ cmd_uninstall() {
 # 主逻辑
 case "\${1:-help}" in
     start)
-        cmd_start "\$2"
+        cmd_start
         ;;
     stop)
         cmd_stop
@@ -439,7 +472,7 @@ case "\${1:-help}" in
         cmd_uninstall
         ;;
     help|--help|-h)
-        echo "用法: omo-config-web <command> [args]"
+        echo "用法: omo-config <command> [args]"
         echo ""
         echo "配置管理:"
         echo "  list, ls              列出所有预设配置"
@@ -449,7 +482,7 @@ case "\${1:-help}" in
         echo "  current               显示当前使用的配置"
         echo ""
         echo "服务管理:"
-        echo "  start [name]          启动服务 (可指定配置，否则使用当前配置)"
+        echo "  start                 启动服务"
         echo "  stop                  停止服务"
         echo "  restart               重启服务"
         echo "  status                查看服务状态"
@@ -460,24 +493,23 @@ case "\${1:-help}" in
         echo "  help                  显示帮助"
         echo ""
         echo "示例:"
-        echo "  omo-config-web create daily       # 创建名为 daily 的配置"
-        echo "  omo-config-web use daily          # 切换到 daily 配置"
-        echo "  omo-config-web start              # 使用当前配置启动服务"
-        echo "  omo-config-web start daily        # 使用 daily 配置启动服务"
-        echo "  omo-config-web list               # 查看所有配置"
+        echo "  omo-config create daily       # 创建名为 daily 的配置"
+        echo "  omo-config use daily          # 切换到 daily 配置"
+        echo "  omo-config start              # 启动服务"
+        echo "  omo-config list               # 查看所有配置"
         ;;
     *)
         error "未知命令: \$1"
-        echo "运行 omo-config-web help 查看帮助"
+        echo "运行 omo-config help 查看帮助"
         exit 1
         ;;
 esac
 BINSCRIPT
-    chmod +x "$BIN_DIR/omo-config-web"
+    chmod +x "$BIN_DIR/omo-config"
 
     info "安装完成！"
-    info "运行 omo-config-web help 查看帮助"
-    info "运行 omo-config-web start 启动服务"
+    info "运行 omo-config help 查看帮助"
+    info "运行 omo-config start 启动服务"
 }
 
 # ==================== 卸载 ====================
@@ -491,7 +523,7 @@ uninstall() {
 
     # 删除安装文件
     rm -rf "$INSTALL_DIR"
-    rm -f "$BIN_DIR/omo-config-web"
+    rm -f "$BIN_DIR/omo-config"
 
     info "卸载完成"
     info "配置数据保留在 $CONFIG_BASE，如需删除请手动执行: rm -rf $CONFIG_BASE"
@@ -507,10 +539,10 @@ case "${1:-update}" in
         uninstall
         ;;
     start|stop|restart|status|list|ls|use|create|delete|rm|current|help|--help|-h)
-        if [[ -x "$BIN_DIR/omo-config-web" ]]; then
-            "$BIN_DIR/omo-config-web" "$@"
+        if [[ -x "$BIN_DIR/omo-config" ]]; then
+            "$BIN_DIR/omo-config" "$@"
         else
-            error "未安装 omo-config-web，请先运行: bash install.sh update"
+            error "未安装 omo-config，请先运行: bash install.sh update"
             exit 1
         fi
         ;;
@@ -519,7 +551,7 @@ case "${1:-update}" in
         echo ""
         echo "  update [VERSION]   - 从 GitHub Releases 下载并全局安装 (默认最新版本)"
         echo "  uninstall          - 卸载"
-        echo "  start [NAME]       - 启动服务 (可指定配置名称)"
+        echo "  start                启动服务"
         echo "  stop               - 停止服务"
         echo "  restart            - 重启服务"
         echo "  status             - 查看服务状态"
@@ -532,8 +564,7 @@ case "${1:-update}" in
         echo ""
         echo "示例:"
         echo "  bash install.sh update              # 安装/更新到最新版本"
-        echo "  omo-config-web create daily         # 创建配置"
-        echo "  omo-config-web start daily          # 使用指定配置启动"
+        echo "  omo-config create daily         # 创建配置"
         exit 1
         ;;
 esac

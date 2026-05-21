@@ -8,12 +8,17 @@ Web UI for configuring [Oh-My-OpenAgent (OMO)](https://github.com/code-yeongyu/o
 
 | Task | Command |
 |------|---------|
+| Setup (source) | `bash scripts/setup-dev.sh` — install deps, build, init config, register `omo-config` CLI |
 | Dev server | `pnpm dev` |
 | Production build | `pnpm build` |
 | Lint | `pnpm lint` |
-| Start prod | `pnpm start` |
+| Start server | `pnpm start` or `omo-config start` |
 
 **Build = typecheck + build in one.** No separate `tsc` step needed. No test suite yet.
+
+**Two install modes** produce identical `omo-config` CLI:
+- **Pre-built** (`install.sh`): downloads release tarball → installs to `~/.local/share/omo-config/`
+- **Source** (`scripts/setup-dev.sh`): clone → `pnpm install` → `pnpm build` → installs from source dir
 
 ## Stack
 
@@ -40,8 +45,10 @@ src/
 │   ├── profiles/page.tsx   # Server component → ProfilesClient
 │   └── api/
 │       └── config/
-│           ├── route.ts        # GET: read config files from disk
-│           └── publish/route.ts # POST: write config files to disk (JSONC-aware)
+│           ├── route.ts            # GET: read config files from disk
+│           ├── publish/route.ts    # POST: write config files to disk (JSONC-aware)
+│           ├── presets/route.ts    # GET/POST/DELETE: preset management
+│           └── activate/route.ts   # GET: diff check / POST: activate preset
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives (DO NOT hand-edit)
 │   ├── layout/             # Sidebar, Header, ThemeProvider, ThemeToggle
@@ -99,24 +106,26 @@ Any component using `useConfigStore` must be a client component (`"use client"`)
 - `importFromJson()` / `exportToJson()` for JSON round-trip
 - Monaco ↔ Visual sync: debounced (300ms) auto-sync from JSON editor to store; visual changes propagate to Monaco on tab switch
 - Profile keys use `name` field (not UUID) — duplicate names silently overwrite
-- **Known gap**: `tmux` and `team_mode` fields exist in types but are NOT in the store — they are lost on import→export round-trip
+- `tmux` and `team_mode` fields are preserved on import→export round-trip via `importFromJson` / `exportToJson`
 - **Dead state**: `configProfile` (singular), `rawJson`, and `activeProfileId` are stored but never meaningfully used
 
 ### Config Data Source
 `src/lib/configReader.ts` uses API routes with mock fallback:
 - **API mode** (production): `GET /api/config` reads from disk, `POST /api/config/publish` writes to disk
-- **Mock mode** (fallback): returns hardcoded sample data from `mock-data.ts` when API is unavailable — **no visual indicator** that mock data is being shown
+- **Mock mode** (fallback): returns hardcoded sample data when API is unavailable — **no visual indicator** that mock data is being shown
 - Config files: `~/.config/opencode/opencode.json` (providers + models) + `~/.config/opencode/oh-my-openagent.jsonc` (agents + categories + profiles + runtime)
 - JSONC write uses `jsonc-parser` with sequential `modify()` + `applyEdits()` to preserve comments and formatting
 - Config splitter/merger (`config-splitter.ts` / `config-merger.ts`) maps between store shape and dual-file layout
-- **Known gap**: `writeNewConfig()` in `jsonc-writer.ts` ignores the `isJsonc` parameter — always outputs plain JSON even for `.jsonc` files
+- `writeNewConfig()` in `jsonc-writer.ts` adds JSONC comment header when `isJsonc` is true
 
 ### Preset Config System
-The app supports multiple preset configurations stored in `~/.config/omo-config-web/`:
+The app supports multiple preset configurations stored in `~/.config/omo-config/`:
 - Each preset is a subdirectory containing `opencode.json` + `oh-my-openagent.jsonc`
-- On `omo-config-web start [name]`, the selected preset is copied to `~/.config/opencode/`
-- Current preset tracked in `~/.config/omo-config-web/.current`
+- Current preset tracked in `~/.config/omo-config/.current`
 - The app itself always reads/writes `~/.config/opencode/` — preset management is external to the app
+- **CLI (`omo-config use`)**: detects diffs → prompts `y/N` → auto-backups to `~/.config/omo-config/.backup/<timestamp>/` → copies preset to runtime
+- **Web ("Activate" button)**: GET `/api/config/activate?preset=X` checks diffs → shows confirmation dialog → POST `/api/config/activate` copies files atomically
+- **`start` does NOT copy config** — it only launches the Next.js server
 
 ### pnpm Workspace
 `pnpm-workspace.yaml` declares `onlyBuiltDependencies: [sharp, unrs-resolver]`. Do not remove — build will fail without it.
@@ -145,7 +154,7 @@ This project uses Tailwind CSS v4 with `@tailwindcss/postcss`. There is NO `tail
 - Route-level `error.tsx` files exist for all routes + global — catch errors per route
 - Route-level `loading.tsx` files use Skeleton component — pages show loading skeletons while data loads
 - The `eslint.config.mjs` uses the flat config format with `eslint-config-next` presets
-- **Preset config system**: Multiple presets in `~/.config/omo-config-web/`, each with `opencode.json` + `oh-my-openagent.jsonc`
+- **Preset config system**: Multiple presets in `~/.config/omo-config/`, each with `opencode.json` + `oh-my-openagent.jsonc`
 - **Conflict detection**: Publish checks disk state via ETag, prevents overwriting concurrent changes
 - **Config validation**: `config-validator.ts` checks model refs, required fields before publish
 
@@ -154,7 +163,6 @@ This project uses Tailwind CSS v4 with `@tailwindcss/postcss`. There is NO `tail
 These are confirmed issues that should be fixed before adding new features:
 
 - **Agent form covers only ~32% of fields** — 7 of 22 Agent type fields have UI; missing: skills, permissions, prompt, tools, disable, mode, color, etc.
-- **`tmux` and `team_mode` fields lost on import→export round-trip** — exist in types but NOT in store
 
 ## Language
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 
 import { Slider } from "@/components/ui/slider";

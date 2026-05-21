@@ -13,7 +13,6 @@ interface ConfigState {
   runtimeFallback: RuntimeFallbackConfig | null;
   tmux: TmuxConfig | null;
   teamMode: TeamModeConfig | null;
-  rawJson: string | null;
   isDirty: boolean;
   lastSavedSnapshot: string;
   publishHistory: PublishSnapshot[];
@@ -26,6 +25,8 @@ interface ConfigState {
   updateCategory: (key: string, category: Category) => void;
   updateModel: (providerKey: string, modelKey: string, updates: Partial<Model>) => void;
   updateProvider: (providerKey: string, updates: Partial<Provider>) => void;
+  addProvider: (providerKey: string, provider: Provider) => void;
+  deleteProvider: (providerKey: string) => void;
   // Profile actions
   createProfile: (profile: ConfigProfile) => void;
   updateProfile: (key: string, profile: Partial<ConfigProfile>) => void;
@@ -73,7 +74,6 @@ const initialState = {
   runtimeFallback: null,
   tmux: null,
   teamMode: null,
-  rawJson: null,
   isDirty: false,
   lastSavedSnapshot: '',
   publishHistory: [],
@@ -153,12 +153,42 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       };
     }),
 
+  addProvider: (providerKey: string, provider: Provider) =>
+    set((state) => {
+      if (state.providers[providerKey]) {
+        throw new Error(`Provider "${providerKey}" already exists`);
+      }
+      return {
+        providers: {
+          ...state.providers,
+          [providerKey]: provider,
+        },
+        isDirty: true,
+      };
+    }),
+
+  deleteProvider: (providerKey: string) =>
+    set((state) => {
+      const { [providerKey]: _, ...remainingProviders } = state.providers;
+      return {
+        providers: remainingProviders,
+        isDirty: true,
+      };
+    }),
+
+  // Profile actions
+
   // Profile actions
   createProfile: (profile) =>
-    set((state) => ({
-      configProfiles: { ...state.configProfiles, [profile.name]: profile },
-      isDirty: true,
-    })),
+    set((state) => {
+      if (state.configProfiles[profile.name]) {
+        throw new Error(`Profile "${profile.name}" already exists`);
+      }
+      return {
+        configProfiles: { ...state.configProfiles, [profile.name]: profile },
+        isDirty: true,
+      };
+    }),
 
   updateProfile: (key, updates) =>
     set((state) => {
@@ -175,7 +205,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   deleteProfile: (key) =>
     set((state) => {
-      const { [key]: _, ...rest } = state.configProfiles;
+      const rest = { ...state.configProfiles };
+      delete rest[key];
       return {
         configProfiles: rest,
         activeProfileId: state.activeProfileId === key ? null : state.activeProfileId,
@@ -189,7 +220,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       if (!profile) return state;
       if (oldKey === newName) return state;
       if (state.configProfiles[newName]) return state;
-      const { [oldKey]: _, ...rest } = state.configProfiles;
+      const rest = { ...state.configProfiles };
+      delete rest[oldKey];
       const updatedProfile = { ...profile, name: newName };
       return {
         configProfiles: { ...rest, [newName]: updatedProfile },
@@ -273,7 +305,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setRuntimeFallback: (config) => set({ runtimeFallback: config, isDirty: true }),
 
   importFromJson: (json) => {
-    const parsed = JSON.parse(json) as OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile>; background_task?: BackgroundTaskConfig; runtime_fallback?: RuntimeFallbackConfig; tmux?: TmuxConfig; team_mode?: TeamModeConfig };
+    const parsed = JSON.parse(json) as OmoConfig;
     const providers = parsed.providers ?? {};
     const configProfiles = parsed.configProfiles ?? {};
     const backgroundTask = parsed.background_task ?? null;
@@ -290,18 +322,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       runtimeFallback,
       tmux,
       teamMode,
-      rawJson: json,
-      isDirty: false,
-      lastSavedSnapshot: JSON.stringify({
-        agents: parsed.agents ?? {},
-        categories: parsed.categories ?? {},
-        providers,
-        configProfiles,
-        backgroundTask,
-        runtimeFallback,
-        tmux,
-        teamMode,
-      }, null, 2),
+      isDirty: true,
+      lastSavedSnapshot: get().lastSavedSnapshot, // Keep previous snapshot for discardChanges
     };
 
     set(newState);
@@ -310,7 +332,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   exportToJson: () => {
     const { agents, categories, providers, configProfiles, backgroundTask, runtimeFallback, tmux, teamMode } = get();
-    const config: OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile> } = {
+    const config: OmoConfig = {
       agents,
       categories,
       providers,
@@ -321,7 +343,6 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       ...(teamMode ? { team_mode: teamMode } : {}),
     };
     const json = JSON.stringify(config, null, 2);
-    set({ rawJson: json });
     return json;
   },
 
@@ -473,4 +494,3 @@ export const useTeamMode = () => useConfigStore((state) => state.teamMode);
 export const usePresets = () => useConfigStore((s) => s.presets);
 export const useCurrentPreset = () => useConfigStore((s) => s.currentPreset);
 export const useIsLoadingPresets = () => useConfigStore((s) => s.isLoadingPresets);
-

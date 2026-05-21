@@ -1,3 +1,5 @@
+import { fileExists } from "@/lib/server-utils";
+
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import {
@@ -228,12 +230,3 @@ export async function DELETE(request: Request) {
   }
 }
 
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    console.error("[presets] fileExists check failed for:", filePath);
-    return false;
-  }
-}

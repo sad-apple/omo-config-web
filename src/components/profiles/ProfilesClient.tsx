@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useCallback } from "react";
 import { useConfigStore } from "@/store/configStore";
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
 import { ProfileConfigSheet } from "@/components/profiles/ProfileConfigSheet";
@@ -40,12 +41,12 @@ export function ProfilesClient() {
   const activeProfileId = useConfigStore((state) => state.activeProfileId);
   const deleteProfile = useConfigStore((state) => state.deleteProfile);
   const setActiveProfile = useConfigStore((state) => state.setActiveProfile);
-  const setLastSavedSnapshot = useConfigStore((state) => state.setLastSavedSnapshot);
   const exportToJson = useConfigStore((state) => state.exportToJson);
-  const agents = useConfigStore((state) => state.agents);
-  const providers = useConfigStore((state) => state.providers);
-  const backgroundTask = useConfigStore((state) => state.backgroundTask);
-  const runtimeFallback = useConfigStore((state) => state.runtimeFallback);
+  const importFromJson = useConfigStore((state) => state.importFromJson);
+
+  const handleJsonChange = useCallback((value: object) => {
+    importFromJson(JSON.stringify(value));
+  }, [importFromJson]);
 
   const handleCreate = () => {
     setEditingProfileKey(null);
@@ -64,7 +65,6 @@ export function ProfilesClient() {
   const confirmDelete = () => {
     if (deleteTarget) {
       deleteProfile(deleteTarget);
-      setLastSavedSnapshot();
       if (selectedProfileKey === deleteTarget) {
         setSelectedProfileKey(null);
       }
@@ -75,7 +75,6 @@ export function ProfilesClient() {
 
   const handleSetActive = (key: string) => {
     setActiveProfile(key);
-    setLastSavedSnapshot();
     toast.success(`Profile "${key}" set as active`);
   };
 
@@ -85,14 +84,14 @@ export function ProfilesClient() {
     } catch {
       return { agents: {}, categories: {}, providers: {} };
     }
-  }, [agents, providers, configProfiles, backgroundTask, runtimeFallback, exportToJson]);
+  }, [exportToJson]);
 
   const profileEntries = Object.entries(configProfiles);
   const selectedProfile = selectedProfileKey ? configProfiles[selectedProfileKey] : null;
 
   return (
     <>
-      <DualModeEditor jsonValue={jsonValue} title="Config Profiles">
+      <DualModeEditor jsonValue={jsonValue} title="Config Profiles" onJsonChange={handleJsonChange}>
         <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
           <div className="mx-auto w-full max-w-6xl px-6 py-8">
             {/* Header */}
@@ -261,9 +260,12 @@ export function ProfilesClient() {
               store.setAgents({ ...store.agents, ...template.agents });
               store.setCategories({ ...store.categories, ...template.categories });
               Object.entries(template.configProfiles).forEach(([, profile]) => {
-                store.createProfile(profile);
+                try {
+                  store.createProfile(profile);
+                } catch (error) {
+                  toast.warning(error instanceof Error ? error.message : "Profile creation failed");
+                }
               });
-              store.setLastSavedSnapshot();
               setTemplateDialogOpen(false);
               toast.success(`Template "${template.name}" applied`);
             }}

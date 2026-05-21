@@ -2,6 +2,7 @@
  * Config validation utility for OMO Config Web.
  * Pure TypeScript — no Zod, no store imports, client+server compatible.
  */
+import { parseModelRef } from "@/lib/model-ref";
 
 // ─── Public Types ───────────────────────────────────────────────────────────
 
@@ -43,18 +44,6 @@ function isValidUrl(str: string): boolean {
   }
 }
 
-/**
- * Parse a model reference string like "provider/modelName".
- * Returns { provider, model } or null if invalid format.
- */
-function parseModelRef(ref: string): { provider: string; model: string } | null {
-  const firstSlash = ref.indexOf("/");
-  if (firstSlash === -1) return null;
-  const provider = ref.slice(0, firstSlash);
-  const model = ref.slice(firstSlash + 1);
-  if (!provider || !model) return null;
-  return { provider, model };
-}
 
 // ─── Validation Rules ───────────────────────────────────────────────────────
 

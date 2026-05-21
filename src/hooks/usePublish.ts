@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useConfigStore } from "@/store/configStore";
-import { splitConfig } from "@/lib/config-splitter";
 import { toast } from "sonner";
 import type { PublishSnapshot } from "@/types";
 import type { ValidationError } from "@/lib/config-validator";
@@ -22,14 +21,17 @@ export function usePublish() {
   const exportToJson = useConfigStore((s) => s.exportToJson);
   const addPublishSnapshot = useConfigStore((s) => s.addPublishSnapshot);
   const setLastSavedSnapshot = useConfigStore((s) => s.setLastSavedSnapshot);
+  const currentPreset = useConfigStore((s) => s.currentPreset);
   const etagsRef = useRef<{ opencode: string | null; omo: string | null }>({ opencode: null, omo: null });
-
   /** Update etags from API response */
   const updateEtags = useCallback((newEtags: { opencode: string | null; omo: string | null }) => {
     etagsRef.current = newEtags;
   }, []);
 
   const publish = useCallback(async (force = false, presetName?: string) => {
+    // Resolve presetName: use provided value, fallback to currentPreset, then "default"
+    const resolvedPresetName = presetName ?? currentPreset ?? "default";
+
     if (isPublishing) return;
 
     setIsPublishing(true);
@@ -43,7 +45,7 @@ export function usePublish() {
       const response = await fetch("/api/config/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config, etags: etagsRef.current, force, presetName }),
+        body: JSON.stringify({ config, etags: etagsRef.current, force, presetName: resolvedPresetName }),
       });
 
       if (response.status === 409) {
@@ -85,7 +87,7 @@ export function usePublish() {
       addPublishSnapshot(snapshot);
       setLastSavedSnapshot();
 
-      toast.success(presetName ? `Published to preset: ${presetName}` : "Configuration published to disk", {
+      toast.success(`Published to preset: ${resolvedPresetName}`, {
         description: `Files written: ${result.filesWritten.join(", ")}`,
       });
     } catch (error) {
@@ -95,7 +97,7 @@ export function usePublish() {
     } finally {
       setIsPublishing(false);
     }
-  }, [isPublishing, exportToJson, addPublishSnapshot, setLastSavedSnapshot, updateEtags]);
+  }, [isPublishing, exportToJson, addPublishSnapshot, setLastSavedSnapshot, updateEtags, currentPreset]);
 
   /** Force overwrite after conflict */
   const handleOverwrite = useCallback(async () => {

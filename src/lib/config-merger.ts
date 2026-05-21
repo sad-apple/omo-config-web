@@ -1,7 +1,7 @@
-import type { Provider, Agent, Category, ConfigProfile, OmoConfig, BackgroundTaskConfig, RuntimeFallbackConfig, TmuxConfig, TeamModeConfig } from "@/types";
+import type { Provider, ConfigProfile, OmoConfig } from "@/types";
 import type { OpencodeJsonFile, OmoJsoncFile } from "./config-splitter";
 
-export type MergedConfig = OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile> };
+export type MergedConfig = OmoConfig;
 
 export function mergeConfig(opencodeJson: OpencodeJsonFile, omoJsonc: OmoJsoncFile): MergedConfig {
   const config: MergedConfig = {

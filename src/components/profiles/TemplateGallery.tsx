@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useConfigStore } from "@/store/configStore";
 import { configTemplates, type ConfigTemplate } from "@/lib/config-templates";
 import {
   Card,
@@ -11,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import {
   Code2,
   PenTool,

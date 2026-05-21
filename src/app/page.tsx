@@ -49,7 +49,6 @@ function StatCard({
 export default function HomePage() {
   const providers = useConfigStore((state) => state.providers);
   const agents = useConfigStore((state) => state.agents);
-  const categories = useConfigStore((state) => state.categories);
   const { handleFileInput } = useConfigImport();
   const { handleExport } = useConfigExport();
   const fileInputRef = useRef<HTMLInputElement>(null);

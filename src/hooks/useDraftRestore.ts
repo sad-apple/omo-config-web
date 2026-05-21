@@ -31,7 +31,7 @@ export function useDraftRestore() {
     return null;
   });
   const [showRestoreDialog, setShowRestoreDialog] = useState(draftState !== null);
-  const [draftData, setDraftData] = useState<DraftData | null>(draftState);
+  const [draftData] = useState<DraftData | null>(draftState);
   const importFromJson = useConfigStore((state) => state.importFromJson);
 
   const restoreDraft = () => {

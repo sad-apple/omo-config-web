@@ -32,8 +32,8 @@ export function ProfileAssignmentBoard({ profileKey }: ProfileAssignmentBoardPro
   const setRuntimeFallback = useConfigStore((state) => state.setRuntimeFallback);
 
   // Compute unassigned agents and categories
-  const assignedAgentKeys = profile?.agents ?? [];
-  const assignedCategoryKeys = profile?.categories ?? [];
+  const assignedAgentKeys = React.useMemo(() => profile?.agents ?? [], [profile?.agents]);
+  const assignedCategoryKeys = React.useMemo(() => profile?.categories ?? [], [profile?.categories]);
 
   const unassignedAgents = React.useMemo(() => {
     return Object.keys(agents).filter((key) => !assignedAgentKeys.includes(key));

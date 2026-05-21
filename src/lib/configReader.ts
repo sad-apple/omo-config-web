@@ -1,6 +1,9 @@
-import type { Provider, Model } from "@/types";
+import type { Provider } from "@/types";
 import { mergeConfig } from "@/lib/config-merger";
 import type { OpencodeJsonFile, OmoJsoncFile } from "@/lib/config-splitter";
+import { getCurrentPresetFilePath, getPresetOmoJsoncPath, getPresetOpencodeJsonPath } from "@/lib/config-paths";
+import fs from "fs/promises";
+import * as jsonc from "jsonc-parser";
 
 /**
  * Read providers from opencode.json via API route.
@@ -8,18 +11,41 @@ import type { OpencodeJsonFile, OmoJsoncFile } from "@/lib/config-splitter";
  */
 export async function readProviders(): Promise<Record<string, Provider>> {
   try {
-    const response = await fetch('/api/config');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    // Read current preset from .current file
+    let preset = "default";
+    try {
+      const currentPresetPath = getCurrentPresetFilePath();
+      const content = await fs.readFile(currentPresetPath, "utf-8");
+      preset = content.trim() || "default";
+    } catch {
+      // .current file doesn't exist, use default
     }
-    const data = await response.json();
-    const merged = mergeConfig(data.opencode as OpencodeJsonFile, data.omo as OmoJsoncFile);
+
+    const [opencodeRaw, omoRaw] = await Promise.all([
+      fs.readFile(getPresetOpencodeJsonPath(preset), "utf-8"),
+      fs.readFile(getPresetOmoJsoncPath(preset), "utf-8"),
+    ]);
+
+    const opencode = JSON.parse(opencodeRaw) as OpencodeJsonFile;
+    const omo = jsonc.parse(omoRaw) as OmoJsoncFile;
+    const merged = mergeConfig(opencode, omo);
     return merged.providers ?? MOCK_PROVIDERS;
   } catch (error) {
-    // Fall back to mock data if API call fails
-    console.error("[configReader] Failed to read providers from API, using mock data:", error);
-    return MOCK_PROVIDERS;
+    const code = getErrorCode(error);
+    if (code === "ENOENT") {
+      return MOCK_PROVIDERS;
+    }
+    throw error;
   }
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined;
+  }
+
+  const { code } = error as { code?: unknown };
+  return typeof code === "string" ? code : undefined;
 }
 
 const MOCK_PROVIDERS: Record<string, Provider> = {

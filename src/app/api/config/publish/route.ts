@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { computeEtag } from "@/lib/etag";
-import { getOpencodeJsonPath, getOmoJsoncPath, getConfigDir, getPresetOpencodeJsonPath, getPresetOmoJsoncPath, getPresetDir } from "@/lib/config-paths";
+import { getPresetOpencodeJsonPath, getPresetOmoJsoncPath, getPresetDir } from "@/lib/config-paths";
 import { splitConfig } from "@/lib/config-splitter";
 import { mergeJsonc, writeNewConfig } from "@/lib/jsonc-writer";
 import { validateConfig } from "@/lib/config-validator";
@@ -12,7 +12,7 @@ interface PublishRequestBody {
   config: Record<string, unknown>;
   etags?: { opencode: string | null; omo: string | null };
   force?: boolean;
-  presetName?: string;
+  presetName: string;
 }
 
 
@@ -28,6 +28,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!presetName) {
+      return NextResponse.json(
+        { success: false, error: "presetName is required" },
+        { status: 400 }
+      );
+    }
+
     // Validate config before publishing
     const validation = validateConfig(config);
     if (!validation.valid) {
@@ -37,8 +44,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const opencodePath = presetName ? getPresetOpencodeJsonPath(presetName) : getOpencodeJsonPath();
-    const omoPath = presetName ? getPresetOmoJsoncPath(presetName) : getOmoJsoncPath();
+    const opencodePath = getPresetOpencodeJsonPath(presetName);
+    const omoPath = getPresetOmoJsoncPath(presetName);
 
     // ETag validation (skip if force=true)
     if (etags && !force) {
@@ -84,12 +91,7 @@ export async function POST(request: Request) {
     );
 
     // Ensure config directory exists
-    if (presetName) {
-      await fs.mkdir(getPresetDir(presetName), { recursive: true });
-    } else {
-      const configDir = getConfigDir();
-      await fs.mkdir(configDir, { recursive: true });
-    }
+    await fs.mkdir(getPresetDir(presetName), { recursive: true });
 
     const filesWritten: string[] = [];
 

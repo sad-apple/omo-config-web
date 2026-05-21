@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Download, Upload, FileJson, X, FolderOpen } from 'lucide-react';
+import { Download, Upload, FileJson, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,10 +27,10 @@ export function ImportExportButtons() {
   const { handleExport } = useConfigExport();
   const {
     isImporting,
-    handleFileSelect,
+    // handleFileSelect,
     handleFileInput,
     handleDrop,
-    handleDragOver,
+    // handleDragOver,
   } = useConfigImport();
   const importFromJson = useConfigStore((state) => state.importFromJson);
   const [isLoadingDisk, setIsLoadingDisk] = useState(false);
@@ -68,7 +68,9 @@ export function ImportExportButtons() {
   const handleLoadFromDisk = async () => {
     setIsLoadingDisk(true);
     try {
-      const response = await fetch('/api/config');
+      const currentPreset = useConfigStore.getState().currentPreset;
+      const preset = currentPreset || 'default';
+      const response = await fetch(`/api/config?preset=${encodeURIComponent(preset)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

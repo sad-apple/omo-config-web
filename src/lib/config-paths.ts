@@ -14,7 +14,7 @@ export function getOmoJsoncPath(): string {
 }
 
 export function getPresetsDir(): string {
-  return path.join(os.homedir(), ".config", "omo-config-web");
+  return path.join(os.homedir(), ".config", "omo-config");
 }
 
 export function getPresetDir(presetName: string): string {

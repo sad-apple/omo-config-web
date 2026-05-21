@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useCallback } from "react";
 import { useConfigStore } from "@/store/configStore";
 import { DualModeEditor } from "@/components/editor/DualModeEditor";
 import { AgentList } from "@/components/agents/AgentList";
@@ -13,14 +14,17 @@ export function AgentsClient() {
   const providers = useConfigStore((state) => state.providers);
   const categories = useConfigStore((state) => state.categories);
   const updateAgent = useConfigStore((state) => state.updateAgent);
-  const setLastSavedSnapshot = useConfigStore((state) => state.setLastSavedSnapshot);
   const exportToJson = useConfigStore((state) => state.exportToJson);
+  const importFromJson = useConfigStore((state) => state.importFromJson);
+
+  const handleJsonChange = useCallback((value: object) => {
+    importFromJson(JSON.stringify(value));
+  }, [importFromJson]);
 
   const selectedAgent = selectedAgentKey ? agents[selectedAgentKey] : null;
 
   const handleSave = (agentKey: string, agent: typeof agents[string]) => {
     updateAgent(agentKey, agent);
-    setLastSavedSnapshot();
     toast.success(`Agent "${agentKey}" saved`);
   };
 
@@ -30,11 +34,11 @@ export function AgentsClient() {
     } catch {
       return { agents: {}, categories: {}, providers: {} };
     }
-  }, [agents, providers, exportToJson]);
+  }, [exportToJson]);
 
   return (
     <>
-      <DualModeEditor jsonValue={jsonValue} title="Agents">
+      <DualModeEditor jsonValue={jsonValue} title="Agents" onJsonChange={handleJsonChange}>
         <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
           <div className="mx-auto w-full max-w-6xl px-6 py-8">
             <div className="mb-2">

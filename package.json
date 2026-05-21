@@ -1,5 +1,5 @@
 {
-  "name": "omo-config-web",
+  "name": "omo-config",
   "version": "0.1.0",
   "private": true,
   "scripts": {

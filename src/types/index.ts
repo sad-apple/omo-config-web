@@ -146,6 +146,8 @@ export interface TeamModeConfig {
 export interface OmoConfig {
   agents: Record<string, Agent>;
   categories: Record<string, Category>;
+  providers?: Record<string, Provider>;
+  configProfiles?: Record<string, ConfigProfile>;
   background_task?: BackgroundTaskConfig;
   runtime_fallback?: RuntimeFallbackConfig;
   tmux?: TmuxConfig;

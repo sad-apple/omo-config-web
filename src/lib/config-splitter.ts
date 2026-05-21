@@ -20,7 +20,7 @@ export interface SplitConfigResult {
 }
 
 export function splitConfig(
-  config: OmoConfig & { providers?: Record<string, Provider>; configProfiles?: Record<string, ConfigProfile> }
+  config: OmoConfig
 ): SplitConfigResult {
   const opencodeJson: OpencodeJsonFile = {};
   const omoJsonc: OmoJsoncFile = {};

@@ -34,7 +34,7 @@ export function mergeJsonc(
 
   // JSONC: use jsonc-parser to preserve comments
   const errors: ParseError[] = [];
-  const parsed = jsonc.parseTree(originalText, errors);
+  jsonc.parseTree(originalText, errors);
 
   // If parsing fails, fall back to writing new data
   if (errors.length > 0) {

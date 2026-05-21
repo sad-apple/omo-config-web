@@ -10,8 +10,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Trash2, Power, ChevronDown, Loader2 } from "lucide-react";
+import { Check, Plus, Trash2, Power, ChevronDown, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { CreatePresetDialog } from "./CreatePresetDialog";
 
@@ -31,6 +41,9 @@ export function PresetSelector({ className }: PresetSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [changedFiles, setChangedFiles] = useState<string[]>([]);
+  const [pendingActivate, setPendingActivate] = useState<string | null>(null);
 
   const handleSelectPreset = (name: string) => {
     if (isDirty) {
@@ -56,7 +69,18 @@ export function PresetSelector({ className }: PresetSelectorProps) {
     }
   };
 
-  const handleActivate = async () => {
+  const checkPresetChanges = async (name: string): Promise<string[]> => {
+    try {
+      const res = await fetch(`/api/config/activate?preset=${encodeURIComponent(name)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.changedFiles || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const handleActivateClick = async () => {
     if (!currentPreset) {
       toast.error("No preset selected to activate");
       return;
@@ -69,10 +93,24 @@ export function PresetSelector({ className }: PresetSelectorProps) {
       return;
     }
 
+    // Check for changes first
+    const changes = await checkPresetChanges(currentPreset);
+    if (changes.length > 0) {
+      setChangedFiles(changes);
+      setPendingActivate(currentPreset);
+      setConfirmDialogOpen(true);
+      return;
+    }
+
+    // No changes, proceed directly
+    await doActivate(currentPreset);
+  };
+
+  const doActivate = async (name: string) => {
     setIsActivating(true);
     try {
-      await activatePreset(currentPreset);
-      toast.success(`Preset "${currentPreset}" activated`);
+      await activatePreset(name);
+      toast.success(`Preset "${name}" activated`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "";
       if (message === "UNSAVED_CHANGES") {
@@ -80,10 +118,17 @@ export function PresetSelector({ className }: PresetSelectorProps) {
           description: "You have unsaved changes. Please publish or discard before activating.",
         });
       } else {
-        toast.error(`Failed to activate preset "${currentPreset}"`);
+        toast.error(`Failed to activate preset "${name}"`);
       }
     } finally {
       setIsActivating(false);
+    }
+  };
+
+  const handleConfirmActivate = async () => {
+    setConfirmDialogOpen(false);
+    if (pendingActivate) {
+      await doActivate(pendingActivate);
     }
   };
 
@@ -155,7 +200,7 @@ export function PresetSelector({ className }: PresetSelectorProps) {
           variant="outline"
           size="sm"
           className="h-8 gap-1.5"
-          onClick={handleActivate}
+          onClick={handleActivateClick}
           disabled={!currentPreset || isActivating}
           title="Activate current preset (copy to ~/.config/opencode/)"
         >
@@ -167,6 +212,36 @@ export function PresetSelector({ className }: PresetSelectorProps) {
           <span className="hidden sm:inline">Activate</span>
         </Button>
       </div>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Configuration Will Be Overwritten
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The following runtime configuration files differ from the preset and will be overwritten:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-2">
+            <ul className="list-disc pl-5 text-sm font-mono text-muted-foreground">
+              {changedFiles.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Modified files will be backed up to <code className="rounded bg-muted px-1">~/.config/omo-config/.backup/</code>
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmActivate}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <CreatePresetDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
     </>

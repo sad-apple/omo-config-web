@@ -10,6 +10,7 @@
 - **分类管理** — 按任务类型对智能体进行分类管理
 - **配置方案 (Profiles)** — 创建多套配置方案，按需启用不同智能体和分类
 - **预设配置管理** — 创建、切换、删除多套预设配置，按需启用不同智能体和模型组合
+- **安全同步** — CLI (`use`) 和 Web ("Activate") 在覆盖前检测差异、要求用户确认、自动备份旧文件
 - **冲突检测** — 发布时自动检测磁盘配置变更，避免覆盖他人修改
 - **配置验证** — 发布前校验配置完整性，拦截无效引用和缺失必填字段
 - **发布并发控制** — ETag 版本检查，防止最后写入覆盖问题
@@ -42,10 +43,10 @@
 
 ```bash
 # 一键安装/更新到最新版本
-curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config-web/main/install.sh | bash -s update
+curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config/main/install.sh | bash -s update
 
 # 或下载后执行
-curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config-web/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/sad-apple/omo-config/main/install.sh -o install.sh
 chmod +x install.sh
 bash install.sh update
 
@@ -53,14 +54,26 @@ bash install.sh update
 bash install.sh update v0.2.0
 ```
 
-安装完成后，`omo-config-web` 命令全局可用。
+安装完成后，`omo-config` 命令全局可用。
+
+### 源码安装
+
+克隆仓库后通过一键脚本设置（检查依赖、安装 npm 包、构建项目、初始化配置目录、注册全局命令）：
+
+```bash
+git clone https://github.com/sad-apple/omo-config-web.git
+cd omo-config-web
+bash scripts/setup-dev.sh
+```
+
+安装完成后，`omo-config` 命令全局可用，使用方式与预构建安装完全一致。
 
 ### 配置管理
 
-预设配置存放在 `~/.config/omo-config-web/` 目录下，每个配置一个子目录：
+预设配置存放在 `~/.config/omo-config/` 目录下，每个配置一个子目录：
 
 ```
-~/.config/omo-config-web/
+~/.config/omo-config/
 ├── default/                    # 默认配置
 │   ├── opencode.json
 │   └── oh-my-openagent.jsonc
@@ -72,32 +85,31 @@ bash install.sh update v0.2.0
 
 ```bash
 # 列出所有预设配置
-omo-config-web list
+omo-config list
 
 # 创建新配置
-omo-config-web create daily
+omo-config create daily
 
-# 切换到指定配置
-omo-config-web use daily
+# 切换到指定配置（含差异检测、用户确认、自动备份）
+omo-config use daily
 
 # 查看当前配置
-omo-config-web current
+omo-config current
 
 # 删除配置
-omo-config-web delete daily
+omo-config delete daily
 ```
 
 ### 服务管理
 
 ```bash
-omo-config-web start              # 使用当前配置启动服务
-omo-config-web start daily        # 使用指定配置启动服务
-omo-config-web stop               # 停止服务
-omo-config-web restart            # 重启服务
-omo-config-web status             # 查看状态
+omo-config start              # 启动服务（不自动复制配置）
+omo-config stop               # 停止服务
+omo-config restart            # 重启服务
+omo-config status             # 查看状态
 ```
 
-启动时会自动将预设配置复制到 `~/.config/opencode/` 目录供应用读取。
+> **注意**：`start` 仅启动 Next.js 服务器，不会复制任何配置。使用 `omo-config use <name>` 切换预设后，再启动服务。
 
 #### 环境变量
 
@@ -108,15 +120,20 @@ omo-config-web status             # 查看状态
 自定义端口示例：
 
 ```bash
-PORT=8080 omo-config-web start
+PORT=8080 omo-config start
 ```
 
 ### 开发
 
 ```bash
-# 启动开发服务器
-pnpm dev
+# 一键设置（检查依赖 + 安装 + 构建 + 初始化配置 + 注册全局命令）
+bash scripts/setup-dev.sh
+
+# 启动服务
+omo-config start
 ```
+
+打开 [http://localhost:3000](http://localhost:3000) 查看应用。
 
 打开 [http://localhost:3000](http://localhost:3000) 查看应用。
 
@@ -151,8 +168,8 @@ src/
 │   └── api/config/             # API 路由
 │       ├── route.ts            # GET: 读取磁盘配置
 │       ├── publish/route.ts    # POST: 写入配置（JSONC + ETag 并发控制）
-│       ├── presets/route.ts    # GET/POST: 预设配置管理
-│       └── activate/route.ts   # POST: 激活预设配置
+│       ├── presets/route.ts    # GET/POST/DELETE: 预设配置管理
+│       └── activate/route.ts   # GET: 检测差异 / POST: 激活预设配置
 ├── components/
 │   ├── ui/                     # shadcn/ui 基础组件
 │   ├── layout/                 # 布局组件（侧边栏、头部、主题）
@@ -169,14 +186,14 @@ src/
 
 ## 配置文件
 
-本工具采用**预设配置 + 启动时应用**的模式：
+本工具采用**预设配置 + 显式激活**的模式：
 
 ### 预设配置目录
 
-所有预设配置存放在 `~/.config/omo-config-web/` 下，每个配置一个子目录：
+所有预设配置存放在 `~/.config/omo-config/` 下，每个配置一个子目录：
 
 ```
-~/.config/omo-config-web/
+~/.config/omo-config/
 ├── default/
 │   ├── opencode.json          # 提供商和模型
 │   └── oh-my-openagent.jsonc  # 智能体、分类、配置方案
@@ -188,14 +205,23 @@ src/
 
 ### 运行时配置目录
 
-启动服务时，预设配置会自动复制到 `~/.config/opencode/`：
+运行时配置位于 `~/.config/opencode/`，应用通过 API 路由读取和写入：
 
 | 文件 | 格式 | 内容 |
 |------|------|------|
 | `~/.config/opencode/opencode.json` | JSON | 提供商 (providers) 和模型 (models) |
 | `~/.config/opencode/oh-my-openagent.jsonc` | JSONC | 智能体、分类、配置方案、运行时配置 |
 
-应用通过 API 路由读取和写入运行时配置目录，写入时使用 `jsonc-parser` 保留注释和格式。
+### 安全同步机制
+
+CLI (`omo-config use`) 和 Web ("Activate" 按钮) 在同步预设到运行时目录时：
+
+1. **差异检测** — 比较预设文件与运行时文件内容
+2. **用户确认** — CLI 终端输入 `y/N`，Web 弹出确认对话框
+3. **自动备份** — 旧文件自动备份到 `~/.config/omo-config/.backup/<时间戳>/`
+4. **原子操作** — 先复制到临时目录，再 rename 确保一致性
+
+> `start` 命令不再自动复制配置，完全解耦。
 
 ## 使用指南
 
@@ -235,6 +261,13 @@ src/
 - 确认后将配置写入本地磁盘
 - 查看发布历史，支持回滚到任意版本
 
+### 6. 激活预设
+
+在页面右上角的预设选择器中：
+- 从下拉菜单选择预设
+- 点击 **Activate** 按钮将预设同步到运行时目录
+- 如有差异，确认对话框会显示将被覆盖的文件列表
+
 ## 开发指南
 
 ### 添加 shadcn/ui 组件
@@ -269,8 +302,10 @@ const { agents, setAgents } = useConfigStore();
 
 本项目使用 Tailwind CSS v4，主题变量定义在 `src/app/globals.css` 的 `@theme` 块中，无需 `tailwind.config.ts`。
 
+## 已知问题
+
 - Agent 配置表单仅覆盖约 32% 的字段（skills、permissions、prompt 等尚未支持）
-- `tmux` 和 `team_mode` 字段在导入/导出时会丢失
+
 ## 许可证
 
 MIT

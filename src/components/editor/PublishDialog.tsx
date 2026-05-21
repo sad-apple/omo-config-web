@@ -28,9 +28,7 @@ export function PublishDialog({ className }: PublishDialogProps) {
   const isDirty = useIsDirty();
   const { publish, isPublishing } = usePublish();
   const currentPreset = useCurrentPreset();
-  const configBase = currentPreset
-    ? `~/.config/omo-config-web/${currentPreset}`
-    : "~/.config/opencode";
+  const configBase = `~/.config/omo-config/${currentPreset || "default"}`;
   const exportToJson = useConfigStore((s) => s.exportToJson);
 
   const handlePublish = async () => {
@@ -42,7 +40,7 @@ export function PublishDialog({ className }: PublishDialogProps) {
       return;
     }
     setValidationErrors([]);
-    await publish(false, currentPreset || undefined);
+    await publish(false, currentPreset || "default");
     setOpen(false);
   };
 
