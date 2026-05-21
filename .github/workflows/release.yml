@@ -82,9 +82,6 @@ jobs:
             tar -xzf omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
             cd omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64
 
-            # 安装运行时依赖
-            npm install --omit=dev
-
             # 启动
             ./start.sh start
             ```
