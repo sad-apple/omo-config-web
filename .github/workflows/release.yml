@@ -37,10 +37,13 @@ jobs:
 
       - name: Bump version (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
+        id: bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           pnpm version ${{ github.event.inputs.bump }}
+          NEW_TAG="v$(node -p 'require("./package.json").version')"
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
           git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,14 +58,15 @@ jobs:
       - name: Package release
         run: bash scripts/package-release.sh
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ steps.bump.outputs.tag || github.ref_name }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ steps.bump.outputs.tag || github.ref_name }}
+          name: Release ${{ steps.bump.outputs.tag || github.ref_name }}
           body: |
-            ## OMO Config Web ${{ github.ref_name }}
+            ## OMO Config Web ${{ steps.bump.outputs.tag || github.ref_name }}
 
             ### 一键安装
             ```bash
@@ -72,11 +76,11 @@ jobs:
             ### 手动部署
             ```bash
             # 下载预构建包
-            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/omo-config-${{ github.ref_name }}-linux-x64.tar.gz
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.bump.outputs.tag || github.ref_name }}/omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
 
             # 解压
-            tar -xzf omo-config-${{ github.ref_name }}-linux-x64.tar.gz
-            cd omo-config-${{ github.ref_name }}-linux-x64
+            tar -xzf omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
+            cd omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64
 
             # 安装运行时依赖
             npm install --omit=dev
@@ -93,6 +97,6 @@ jobs:
             omo-config start
             ```
           files: |
-            omo-config-${{ github.ref_name }}-linux-x64.tar.gz
+            omo-config-${{ steps.bump.outputs.tag || github.ref_name }}-linux-x64.tar.gz
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ contains(steps.bump.outputs.tag || github.ref_name, 'alpha') || contains(steps.bump.outputs.tag || github.ref_name, 'beta') || contains(steps.bump.outputs.tag || github.ref_name, 'rc') }}
