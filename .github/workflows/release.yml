@@ -46,7 +46,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          # Approve native builds before install
+          echo 'only-built-dependencies[]=sharp' >> .npmrc
+          echo 'only-built-dependencies[]=unrs-resolver' >> .npmrc
+          pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
         env:
