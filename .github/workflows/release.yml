@@ -48,6 +48,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Approve builds
+        run: pnpm approve-builds sharp unrs-resolver || true
       - name: Build
         run: pnpm build
         env:
