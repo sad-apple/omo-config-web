@@ -1,6 +1,6 @@
 packages:
   - "."
 
-neverBuiltDependencies:
+onlyBuiltDependencies:
   - sharp
   - unrs-resolver

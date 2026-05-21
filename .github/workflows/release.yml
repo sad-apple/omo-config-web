@@ -46,10 +46,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Rebuild native deps
-        run: pnpm rebuild
+        run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
         env:
