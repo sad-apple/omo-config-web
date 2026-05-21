@@ -42,8 +42,8 @@ bash install.sh update v0.1.0
 需要 Node.js ≥ 18 和 pnpm ≥ 9：
 
 ```bash
-git clone https://github.com/sad-apple/omo-config-web.git
-cd omo-config-web
+git clone https://github.com/sad-apple/omo-config.git
+cd omo-config
 bash scripts/setup-dev.sh   # 检查依赖 → 安装 → 构建 → 初始化配置 → 注册 CLI
 omo-config start             # 启动服务
 ```
