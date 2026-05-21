@@ -46,10 +46,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Approve builds
-        run: pnpm approve-builds sharp unrs-resolver || true
+      - name: Rebuild native deps
+        run: pnpm rebuild
       - name: Build
         run: pnpm build
         env:
